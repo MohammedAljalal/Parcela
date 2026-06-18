@@ -1,18 +1,22 @@
-// Manages product categories. Public read, admin-only write.
-'use strict';
+// Manages category tree: creating, updating, and public listing.
 
-const { Category } = require('../models');
-const { sendSuccess, sendError } = require('../utils/response');
+import { Category } from '../models/index.js';
+import { sendSuccess, sendError } from '../utils/response.js';
 
 // GET /api/categories
 const getCategories = async (req, res, next) => {
   try {
-    const categories = await Category.find({ isActive: true, parent: null }).sort({
-      sortOrder: 1,
-      'name.pt': 1,
-    });
+    const filter =
+      req.query.includeInactive === 'true' && req.user?.role === 'admin' ? {} : { isActive: true };
 
-    return sendSuccess(res, { categories }, 'Categories fetched successfully');
+    const categories = await Category.find(filter)
+      .populate('subcategories', 'name slug icon image productsCount isActive sortOrder')
+      .sort({ sortOrder: 1, 'name.pt': 1 });
+
+    // Build the tree (top-level only).
+    const topLevelCategories = categories.filter((c) => !c.parent);
+
+    return sendSuccess(res, { categories: topLevelCategories }, 'Categories fetched successfully');
   } catch (error) {
     next(error);
   }
@@ -21,10 +25,8 @@ const getCategories = async (req, res, next) => {
 // GET /api/categories/:slug
 const getCategoryBySlug = async (req, res, next) => {
   try {
-    const category = await Category.findOne({ slug: req.params.slug, isActive: true }).populate(
-      'subcategories',
-      'name slug image productsCount'
-    );
+    const category = await Category.findOne({ slug: req.params.slug })
+      .populate('subcategories', 'name slug icon image productsCount isActive sortOrder');
 
     if (!category) return sendError(res, 'Category not found', 404);
 
@@ -38,12 +40,10 @@ const getCategoryBySlug = async (req, res, next) => {
 const createCategory = async (req, res, next) => {
   try {
     if (req.body.parent) {
-      const parentExists = await Category.findById(req.body.parent);
-      if (!parentExists) return sendError(res, 'Parent category not found', 404);
+      const parent = await Category.findById(req.body.parent);
+      if (!parent) return sendError(res, 'Parent category not found', 404);
+      if (parent.parent) return sendError(res, 'Maximum nesting level is 2 (Parent -> Child)', 400);
     }
-
-    const existingCategory = await Category.findOne({ 'name.pt': req.body.name.pt });
-    if (existingCategory) return sendError(res, 'A category with this name already exists', 409);
 
     const category = await Category.create(req.body);
     return sendSuccess(res, { category }, 'Category created successfully', 201);
@@ -55,12 +55,17 @@ const createCategory = async (req, res, next) => {
 // PUT /api/categories/:id
 const updateCategory = async (req, res, next) => {
   try {
+    if (req.body.parent) {
+      if (req.body.parent === req.params.id) {
+        return sendError(res, 'A category cannot be its own parent', 400);
+      }
+      const parent = await Category.findById(req.body.parent);
+      if (!parent) return sendError(res, 'Parent category not found', 404);
+      if (parent.parent) return sendError(res, 'Maximum nesting level is 2 (Parent -> Child)', 400);
+    }
+
     const category = await Category.findById(req.params.id);
     if (!category) return sendError(res, 'Category not found', 404);
-
-    if (req.body.parent && req.body.parent === req.params.id) {
-      return sendError(res, 'A category cannot be its own parent', 422);
-    }
 
     Object.assign(category, req.body);
     await category.save();
@@ -77,18 +82,16 @@ const deleteCategory = async (req, res, next) => {
     const category = await Category.findById(req.params.id);
     if (!category) return sendError(res, 'Category not found', 404);
 
-    if (category.productsCount > 0) {
-      return sendError(
-        res,
-        `Cannot delete this category, it has ${category.productsCount} product(s), move them first`,
-        409
-      );
+    const hasSubcategories = await Category.exists({ parent: category._id });
+    if (hasSubcategories) {
+      return sendError(res, 'Cannot delete a category that has subcategories', 409);
     }
 
-    const hasSubcategories = await Category.exists({ parent: category._id });
-    if (hasSubcategories) return sendError(res, 'Cannot delete this category, it has subcategories', 409);
+    if (category.productsCount > 0) {
+      return sendError(res, 'Cannot delete a category that has products', 409);
+    }
 
-    await category.deleteOne();
+    await Category.findByIdAndDelete(category._id);
 
     return sendSuccess(res, {}, 'Category deleted successfully');
   } catch (error) {
@@ -96,4 +99,4 @@ const deleteCategory = async (req, res, next) => {
   }
 };
 
-module.exports = { getCategories, getCategoryBySlug, createCategory, updateCategory, deleteCategory };
+export { getCategories, getCategoryBySlug, createCategory, updateCategory, deleteCategory };

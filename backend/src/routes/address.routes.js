@@ -1,21 +1,19 @@
 // Address routes, all protected (personal data).
-'use strict';
 
-const express = require('express');
-const router = express.Router();
-
-const {
+import { Router } from 'express';
+import {
   getAddresses,
   getAddressById,
   createAddress,
   updateAddress,
   deleteAddress,
   setDefaultAddress,
-} = require('../controllers/address.controller');
+} from '../controllers/address.controller.js';
+import { protect } from '../middleware/auth.middleware.js';
+import validate from '../middleware/validate.js';
+import { createAddressSchema, updateAddressSchema } from '../validators/address.validator.js';
 
-const { protect } = require('../middleware/auth.middleware');
-const validate = require('../middleware/validate');
-const { createAddressSchema, updateAddressSchema } = require('../validators/address.validator');
+const router = Router();
 
 router.use(protect);
 
@@ -26,4 +24,4 @@ router.put('/:id', validate(updateAddressSchema), updateAddress);
 router.delete('/:id', deleteAddress);
 router.put('/:id/default', setDefaultAddress);
 
-module.exports = router;
+export default router;

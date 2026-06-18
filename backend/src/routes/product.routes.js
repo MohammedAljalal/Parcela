@@ -1,22 +1,20 @@
 // Product routes: public read with filters, admin/vendor write with image upload.
-'use strict';
 
-const express = require('express');
-const router = express.Router();
-
-const {
+import { Router } from 'express';
+import {
   getProducts,
   getProductBySlug,
   createProduct,
   updateProduct,
   deleteProductImage,
   deleteProduct,
-} = require('../controllers/product.controller');
+} from '../controllers/product.controller.js';
+import { protect, restrictTo } from '../middleware/auth.middleware.js';
+import validate from '../middleware/validate.js';
+import upload from '../middleware/upload.middleware.js';
+import { createProductSchema, updateProductSchema, listProductsQuerySchema } from '../validators/product.validator.js';
 
-const { protect, restrictTo } = require('../middleware/auth.middleware');
-const validate = require('../middleware/validate');
-const upload = require('../middleware/upload.middleware');
-const { createProductSchema, updateProductSchema, listProductsQuerySchema } = require('../validators/product.validator');
+const router = Router();
 
 router.get('/', validate(listProductsQuerySchema, 'query'), getProducts);
 router.get('/:slug', getProductBySlug);
@@ -42,4 +40,4 @@ router.put(
 router.delete('/:id/images/:imageId', protect, restrictTo('admin', 'vendor'), deleteProductImage);
 router.delete('/:id', protect, restrictTo('admin', 'vendor'), deleteProduct);
 
-module.exports = router;
+export default router;

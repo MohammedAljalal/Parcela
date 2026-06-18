@@ -1,7 +1,6 @@
 // Promotional banners for the home screen.
-'use strict';
 
-const { Schema, model } = require('mongoose');
+import { Schema, model } from 'mongoose';
 
 const bannerSchema = new Schema(
   {
@@ -41,4 +40,4 @@ bannerSchema.virtual('isCurrentlyActive').get(function () {
   return this.isActive && afterStart && beforeEnd;
 });
 
-module.exports = model('Banner', bannerSchema);
+export default model('Banner', bannerSchema);

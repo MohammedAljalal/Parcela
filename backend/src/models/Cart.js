@@ -1,7 +1,6 @@
 // Per-user shopping cart. One cart per user.
-'use strict';
 
-const { Schema, model } = require('mongoose');
+import { Schema, model } from 'mongoose';
 
 const cartItemSchema = new Schema(
   {
@@ -30,4 +29,4 @@ cartSchema.virtual('subtotal').get(function () {
   return this.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
 });
 
-module.exports = model('Cart', cartSchema);
+export default model('Cart', cartSchema);

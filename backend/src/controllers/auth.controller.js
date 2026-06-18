@@ -1,14 +1,13 @@
 // Authentication: phone+OTP login, Google OAuth, profile, logout.
-'use strict';
 
-const { OAuth2Client } = require('google-auth-library');
-const { User, OtpLog } = require('../models');
-const { generateToken } = require('../config/jwt');
-const { sendSuccess, sendError } = require('../utils/response');
-const { sendOtpSms } = require('../lib/smsProvider');
-const generateOtp = require('../utils/generateOtp');
-const { OTP } = require('../config/constants');
-const env = require('../config/env');
+import { OAuth2Client } from 'google-auth-library';
+import { User, OtpLog } from '../models/index.js';
+import { generateToken } from '../config/jwt.js';
+import { sendSuccess, sendError } from '../utils/response.js';
+import { sendOtpSms } from '../lib/smsProvider.js';
+import generateOtp from '../utils/generateOtp.js';
+import { OTP } from '../config/constants.js';
+import env from '../config/env.js';
 
 const googleClient = new OAuth2Client(env.GOOGLE_CLIENT_ID);
 
@@ -168,4 +167,4 @@ const logout = async (req, res, next) => {
   }
 };
 
-module.exports = { sendOtp, verifyOtp, googleAuth, getMe, logout };
+export { sendOtp, verifyOtp, googleAuth, getMe, logout };

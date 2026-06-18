@@ -1,8 +1,7 @@
 // Full order lifecycle with embedded status history.
-'use strict';
 
-const { Schema, model } = require('mongoose');
-const { ORDER_STATUS, PAYMENT_STATUS, PAYMENT_METHOD } = require('../config/constants');
+import { Schema, model } from 'mongoose';
+import { ORDER_STATUS, PAYMENT_STATUS, PAYMENT_METHOD } from '../config/constants.js';
 
 const orderItemSchema = new Schema(
   {
@@ -71,4 +70,4 @@ const orderSchema = new Schema(
 orderSchema.index({ user: 1, createdAt: -1 });
 orderSchema.index({ status: 1 });
 
-module.exports = model('Order', orderSchema);
+export default model('Order', orderSchema);

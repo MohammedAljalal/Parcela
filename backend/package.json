@@ -2,6 +2,7 @@
   "name": "parcela-backend",
   "version": "1.0.0",
   "description": "Parcela e-commerce backend API",
+  "type": "module",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

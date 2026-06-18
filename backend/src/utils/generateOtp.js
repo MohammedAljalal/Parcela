@@ -1,8 +1,7 @@
 // Generates a secure random numeric OTP code.
-'use strict';
 
-const crypto = require('crypto');
-const { OTP } = require('../config/constants');
+import crypto from 'crypto';
+import { OTP } from '../config/constants.js';
 
 const generateOtp = () => {
   const max = 10 ** OTP.LENGTH;
@@ -10,4 +9,4 @@ const generateOtp = () => {
   return randomNumber.toString().padStart(OTP.LENGTH, '0');
 };
 
-module.exports = generateOtp;
+export default generateOtp;

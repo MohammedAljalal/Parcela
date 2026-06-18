@@ -1,13 +1,12 @@
 // Converts a cart into a real order, using a transaction to keep
 // stock deduction, coupon usage and cart clearing atomic.
-'use strict';
 
-const mongoose = require('mongoose');
-const { Cart, Product, Order } = require('../models');
-const { validateStockAvailability } = require('./cart.service');
-const { createNotification } = require('./notification.service');
-const generateOrderNumber = require('../utils/generateOrderNumber');
-const { ORDER_STATUS, PAYMENT_STATUS, NOTIFICATION_TYPE } = require('../config/constants');
+import mongoose from 'mongoose';
+import { Cart, Product, Order } from '../models/index.js';
+import { validateStockAvailability } from './cart.service.js';
+import { createNotification } from './notification.service.js';
+import generateOrderNumber from '../utils/generateOrderNumber.js';
+import { ORDER_STATUS, PAYMENT_STATUS, NOTIFICATION_TYPE } from '../config/constants.js';
 
 const generateUniqueOrderNumber = async () => {
   for (let attempt = 0; attempt < 5; attempt += 1) {
@@ -129,4 +128,4 @@ const createOrderFromCart = async ({
   }
 };
 
-module.exports = { createOrderFromCart };
+export { createOrderFromCart };

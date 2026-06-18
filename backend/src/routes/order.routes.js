@@ -1,21 +1,19 @@
 // Order routes, all protected, some admin-only.
-'use strict';
 
-const express = require('express');
-const router = express.Router();
-
-const {
+import { Router } from 'express';
+import {
   createOrder,
   getMyOrders,
   getOrderById,
   cancelOrder,
   updateOrderStatus,
   getAllOrders,
-} = require('../controllers/order.controller');
+} from '../controllers/order.controller.js';
+import { protect, restrictTo } from '../middleware/auth.middleware.js';
+import validate from '../middleware/validate.js';
+import { createOrderSchema, updateOrderStatusSchema } from '../validators/order.validator.js';
 
-const { protect, restrictTo } = require('../middleware/auth.middleware');
-const validate = require('../middleware/validate');
-const { createOrderSchema, updateOrderStatusSchema } = require('../validators/order.validator');
+const router = Router();
 
 router.use(protect);
 
@@ -28,4 +26,4 @@ router.get('/:id', getOrderById);
 router.put('/:id/cancel', cancelOrder);
 router.put('/:id/status', restrictTo('admin'), validate(updateOrderStatusSchema), updateOrderStatus);
 
-module.exports = router;
+export default router;

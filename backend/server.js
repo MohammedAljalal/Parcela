@@ -1,34 +1,33 @@
 // Application entry point: Express app, middleware, routes, error handling.
-'use strict';
 
-const http = require('http');
-const express = require('express');
-const helmet = require('helmet');
-const cors = require('cors');
-const morgan = require('morgan');
+import http from 'http';
+import express from 'express';
+import helmet from 'helmet';
+import cors from 'cors';
+import morgan from 'morgan';
 
-const connectDB = require('./src/config/database');
+import connectDB from './src/config/database.js';
 
 // Loads all models once, in the correct dependency order.
-require('./src/models');
+import './src/models/index.js';
 
-const env = require('./src/config/env');
-const { notFound, errorHandler } = require('./src/middleware/errorHandler');
-const { sendSuccess } = require('./src/utils/response');
+import env from './src/config/env.js';
+import { notFound, errorHandler } from './src/middleware/errorHandler.js';
+import { sendSuccess } from './src/utils/response.js';
 
-const authRoutes = require('./src/routes/auth.routes');
-const addressRoutes = require('./src/routes/address.routes');
-const islandRoutes = require('./src/routes/island.routes');
-const categoryRoutes = require('./src/routes/category.routes');
-const productRoutes = require('./src/routes/product.routes');
-const cartRoutes = require('./src/routes/cart.routes');
-const orderRoutes = require('./src/routes/order.routes');
-const notificationRoutes = require('./src/routes/notification.routes');
-const reviewRoutes = require('./src/routes/review.routes');
-const wishlistRoutes = require('./src/routes/wishlist.routes');
-const bannerRoutes = require('./src/routes/banner.routes');
-const couponRoutes = require('./src/routes/coupon.routes');
-const paymentRoutes = require('./src/routes/payment.routes');
+import authRoutes from './src/routes/auth.routes.js';
+import addressRoutes from './src/routes/address.routes.js';
+import islandRoutes from './src/routes/island.routes.js';
+import categoryRoutes from './src/routes/category.routes.js';
+import productRoutes from './src/routes/product.routes.js';
+import cartRoutes from './src/routes/cart.routes.js';
+import orderRoutes from './src/routes/order.routes.js';
+import notificationRoutes from './src/routes/notification.routes.js';
+import reviewRoutes from './src/routes/review.routes.js';
+import wishlistRoutes from './src/routes/wishlist.routes.js';
+import bannerRoutes from './src/routes/banner.routes.js';
+import couponRoutes from './src/routes/coupon.routes.js';
+import paymentRoutes from './src/routes/payment.routes.js';
 
 const app = express();
 
@@ -95,4 +94,4 @@ process.on('uncaughtException', (error) => {
   server.close(() => process.exit(1));
 });
 
-module.exports = app;
+export default app;

@@ -1,8 +1,8 @@
 // Core product catalogue.
-'use strict';
 
-const { Schema, model } = require('mongoose');
-const slugify = require('slugify');
+import { Schema, model } from 'mongoose';
+import slugify from 'slugify';
+import { NOTIFICATION_TYPE } from '../config/constants.js';
 
 const imageSchema = new Schema(
   {
@@ -125,16 +125,18 @@ productSchema.post('findOneAndDelete', async function (doc) {
 });
 
 // Notify wishlist owners when stock gets low after a stock update (e.g. order placed).
+// Uses mongoose.model() to avoid circular dependency with notification.service.js.
 productSchema.post('findOneAndUpdate', async function (doc) {
   if (!doc) return;
 
   const LOW_STOCK_THRESHOLD = 3;
   if (doc.stock > 0 && doc.stock <= LOW_STOCK_THRESHOLD) {
     const Wishlist = model('Wishlist');
-    const { createNotification } = require('../services/notification.service');
-    const { NOTIFICATION_TYPE } = require('../config/constants');
 
     const wishlists = await Wishlist.find({ 'products.product': doc._id }).select('user');
+
+    // Lazy-import the service to avoid circular dependency at module load time.
+    const { createNotification } = await import('../services/notification.service.js');
 
     await Promise.all(
       wishlists.map((wishlist) =>
@@ -149,4 +151,4 @@ productSchema.post('findOneAndUpdate', async function (doc) {
   }
 });
 
-module.exports = model('Product', productSchema);
+export default model('Product', productSchema);

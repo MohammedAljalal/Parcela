@@ -1,8 +1,7 @@
 // Central error handling: 404 + global error handler.
-'use strict';
 
-const { sendError } = require('../utils/response');
-const env = require('../config/env');
+import { sendError } from '../utils/response.js';
+import env from '../config/env.js';
 
 const notFound = (req, res, next) => {
   const error = new Error(`Route not found: ${req.originalUrl}`);
@@ -54,4 +53,4 @@ const errorHandler = (err, req, res, next) => {
   return sendError(res, message, statusCode, errors);
 };
 
-module.exports = { notFound, errorHandler };
+export { notFound, errorHandler };

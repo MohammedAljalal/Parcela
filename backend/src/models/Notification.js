@@ -1,8 +1,7 @@
 // In-app notifications for order updates, promotions, system messages.
-'use strict';
 
-const { Schema, model } = require('mongoose');
-const { NOTIFICATION_TYPE } = require('../config/constants');
+import { Schema, model } from 'mongoose';
+import { NOTIFICATION_TYPE } from '../config/constants.js';
 
 const notificationSchema = new Schema(
   {
@@ -26,4 +25,4 @@ notificationSchema.index({ user: 1, isRead: 1, createdAt: -1 });
 // Auto-delete after 90 days.
 notificationSchema.index({ createdAt: 1 }, { expireAfterSeconds: 90 * 24 * 60 * 60 });
 
-module.exports = model('Notification', notificationSchema);
+export default model('Notification', notificationSchema);

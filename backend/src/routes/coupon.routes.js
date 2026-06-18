@@ -1,13 +1,12 @@
 // Coupon routes: admin-only management, preview available to any logged-in user.
-'use strict';
 
-const express = require('express');
-const router = express.Router();
+import { Router } from 'express';
+import { getCoupons, createCoupon, updateCoupon, deleteCoupon, previewCoupon } from '../controllers/coupon.controller.js';
+import { protect, restrictTo } from '../middleware/auth.middleware.js';
+import validate from '../middleware/validate.js';
+import { createCouponSchema, updateCouponSchema, previewCouponSchema } from '../validators/coupon.validator.js';
 
-const { getCoupons, createCoupon, updateCoupon, deleteCoupon, previewCoupon } = require('../controllers/coupon.controller');
-const { protect, restrictTo } = require('../middleware/auth.middleware');
-const validate = require('../middleware/validate');
-const { createCouponSchema, updateCouponSchema, previewCouponSchema } = require('../validators/coupon.validator');
+const router = Router();
 
 router.use(protect);
 
@@ -18,4 +17,4 @@ router.post('/', restrictTo('admin'), validate(createCouponSchema), createCoupon
 router.put('/:id', restrictTo('admin'), validate(updateCouponSchema), updateCoupon);
 router.delete('/:id', restrictTo('admin'), deleteCoupon);
 
-module.exports = router;
+export default router;

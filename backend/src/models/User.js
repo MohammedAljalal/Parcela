@@ -1,9 +1,8 @@
 // User account: phone+OTP login, Google OAuth, or email+password.
-'use strict';
 
-const { Schema, model } = require('mongoose');
-const bcrypt = require('bcryptjs');
-const { ROLES, LANGUAGES, OTP } = require('../config/constants');
+import { Schema, model } from 'mongoose';
+import bcrypt from 'bcryptjs';
+import { ROLES, LANGUAGES, OTP } from '../config/constants.js';
 
 const userSchema = new Schema(
   {
@@ -86,4 +85,4 @@ userSchema.methods.isOtpValid = function (code) {
   );
 };
 
-module.exports = model('User', userSchema);
+export default model('User', userSchema);

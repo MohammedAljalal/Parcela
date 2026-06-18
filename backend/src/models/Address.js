@@ -1,7 +1,6 @@
 // Saved delivery addresses per user.
-'use strict';
 
-const { Schema, model } = require('mongoose');
+import { Schema, model } from 'mongoose';
 
 const addressSchema = new Schema(
   {
@@ -30,4 +29,4 @@ addressSchema.pre('save', async function (next) {
   next();
 });
 
-module.exports = model('Address', addressSchema);
+export default model('Address', addressSchema);

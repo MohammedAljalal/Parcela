@@ -1,5 +1,4 @@
 // Unified API response shape across the whole project.
-'use strict';
 
 const sendSuccess = (res, data = {}, message = 'Success', statusCode = 200) => {
   return res.status(statusCode).json({ success: true, message, data });
@@ -18,4 +17,4 @@ const sendPaginated = (res, data, pagination) => {
   });
 };
 
-module.exports = { sendSuccess, sendError, sendPaginated };
+export { sendSuccess, sendError, sendPaginated };

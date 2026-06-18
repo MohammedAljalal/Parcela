@@ -1,8 +1,6 @@
 // Validation rules for coupon management.
-'use strict';
-
-const Joi = require('joi');
-const { COUPON_TYPE } = require('../config/constants');
+import Joi from 'joi';
+import { COUPON_TYPE } from '../config/constants.js';
 
 const objectId = Joi.string().pattern(/^[0-9a-fA-F]{24}$/).messages({
   'string.pattern.base': 'Invalid identifier',
@@ -52,4 +50,5 @@ const previewCouponSchema = Joi.object({
   code: Joi.string().trim().uppercase().required(),
 });
 
-module.exports = { createCouponSchema, updateCouponSchema, previewCouponSchema };
+export { createCouponSchema, updateCouponSchema, previewCouponSchema };
+

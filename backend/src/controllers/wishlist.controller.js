@@ -1,8 +1,7 @@
 // Manages the current user's wishlist.
-'use strict';
 
-const { Wishlist, Product } = require('../models');
-const { sendSuccess, sendError } = require('../utils/response');
+import { Wishlist, Product } from '../models/index.js';
+import { sendSuccess, sendError } from '../utils/response.js';
 
 // GET /api/wishlist
 const getWishlist = async (req, res, next) => {
@@ -78,4 +77,4 @@ const checkInWishlist = async (req, res, next) => {
   }
 };
 
-module.exports = { getWishlist, addToWishlist, removeFromWishlist, checkInWishlist };
+export { getWishlist, addToWishlist, removeFromWishlist, checkInWishlist };

@@ -1,10 +1,9 @@
 // Loads .env once and exposes typed config object.
 // No other file should access process.env directly.
-'use strict';
 
-require('dotenv').config();
+import 'dotenv/config';
 
-module.exports = {
+const env = {
   NODE_ENV: process.env.NODE_ENV || 'development',
   PORT: process.env.PORT || 5000,
   CLIENT_URL: process.env.CLIENT_URL || 'http://localhost:3000',
@@ -26,3 +25,5 @@ module.exports = {
   VINTI4_WEBHOOK_SECRET: process.env.VINTI4_WEBHOOK_SECRET,
   VINTI4_GATEWAY_URL: process.env.VINTI4_GATEWAY_URL,
 };
+
+export default env;

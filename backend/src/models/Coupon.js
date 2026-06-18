@@ -1,8 +1,7 @@
 // Discount coupon / promo code.
-'use strict';
 
-const { Schema, model } = require('mongoose');
-const { COUPON_TYPE } = require('../config/constants');
+import { Schema, model } from 'mongoose';
+import { COUPON_TYPE } from '../config/constants.js';
 
 const couponSchema = new Schema(
   {
@@ -51,4 +50,4 @@ couponSchema.virtual('isExhausted').get(function () {
   return this.usageLimit > 0 && this.usedCount >= this.usageLimit;
 });
 
-module.exports = model('Coupon', couponSchema);
+export default model('Coupon', couponSchema);

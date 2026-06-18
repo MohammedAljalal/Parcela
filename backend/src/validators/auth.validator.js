@@ -1,7 +1,5 @@
 // Validation rules for phone+OTP and Google authentication.
-'use strict';
-
-const Joi = require('joi');
+import Joi from 'joi';
 
 const phoneSchema = Joi.string()
   .pattern(/^\+238\d{7}$/)
@@ -34,4 +32,5 @@ const googleAuthSchema = Joi.object({
   idToken: Joi.string().required().messages({ 'any.required': 'Google token is required' }),
 });
 
-module.exports = { sendOtpSchema, verifyOtpSchema, googleAuthSchema };
+export { sendOtpSchema, verifyOtpSchema, googleAuthSchema };
+

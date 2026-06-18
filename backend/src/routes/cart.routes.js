@@ -1,21 +1,19 @@
 // Cart routes, all protected (personal data).
-'use strict';
 
-const express = require('express');
-const router = express.Router();
-
-const {
+import { Router } from 'express';
+import {
   getCart,
   addItem,
   updateItemQuantity,
   removeItem,
   setDeliveryIsland,
   clearCart,
-} = require('../controllers/cart.controller');
+} from '../controllers/cart.controller.js';
+import { protect } from '../middleware/auth.middleware.js';
+import validate from '../middleware/validate.js';
+import { addToCartSchema, updateQuantitySchema, setIslandSchema } from '../validators/cart.validator.js';
 
-const { protect } = require('../middleware/auth.middleware');
-const validate = require('../middleware/validate');
-const { addToCartSchema, updateQuantitySchema, setIslandSchema } = require('../validators/cart.validator');
+const router = Router();
 
 router.use(protect);
 
@@ -26,4 +24,4 @@ router.delete('/items/:productId', removeItem);
 router.put('/island', validate(setIslandSchema), setDeliveryIsland);
 router.delete('/', clearCart);
 
-module.exports = router;
+export default router;

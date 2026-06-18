@@ -1,14 +1,13 @@
-// Payment session creation and Vinti4 webhook handling.
-'use strict';
+// Handles payment initiation and Vinti4 (Multibanco) webhook callbacks.
 
-const { Order } = require('../models');
-const { sendSuccess, sendError } = require('../utils/response');
-const { createPaymentSession, verifyWebhookSignature } = require('../lib/vinti4Gateway');
-const { createNotification } = require('../services/notification.service');
-const { ORDER_STATUS, PAYMENT_STATUS, NOTIFICATION_TYPE } = require('../config/constants');
-const env = require('../config/env');
+import { Order } from '../models/index.js';
+import { createPaymentSession, verifyWebhookSignature } from '../lib/vinti4Gateway.js';
+import { sendSuccess, sendError } from '../utils/response.js';
+import { ORDER_STATUS, PAYMENT_STATUS, PAYMENT_METHOD } from '../config/constants.js';
+import env from '../config/env.js';
 
 // POST /api/payments/initiate
+// Generates the redirect URL for the client to complete the payment.
 const initiatePayment = async (req, res, next) => {
   try {
     const { orderId } = req.body;
@@ -16,11 +15,15 @@ const initiatePayment = async (req, res, next) => {
     const order = await Order.findOne({ _id: orderId, user: req.user._id });
     if (!order) return sendError(res, 'Order not found', 404);
 
-    if (order.status !== ORDER_STATUS.PENDING || order.paymentStatus === PAYMENT_STATUS.PAID) {
-      return sendError(res, 'This order does not need payment right now', 409);
+    if (order.paymentMethod !== PAYMENT_METHOD.VINTI4) {
+      return sendError(res, 'This order does not use Vinti4 Multibanco', 400);
     }
 
-    const returnUrl = `${env.CLIENT_URL}/orders/${order._id}/payment-result`;
+    if (order.paymentStatus === PAYMENT_STATUS.PAID) {
+      return sendError(res, 'This order is already paid', 400);
+    }
+
+    const returnUrl = `${env.CLIENT_URL}/checkout/status?order=${order.orderNumber}`;
 
     const { paymentUrl } = createPaymentSession({
       orderNumber: order.orderNumber,
@@ -28,69 +31,62 @@ const initiatePayment = async (req, res, next) => {
       returnUrl,
     });
 
-    return sendSuccess(res, { paymentUrl }, 'Payment session created successfully');
+    return sendSuccess(res, { paymentUrl, orderNumber: order.orderNumber }, 'Payment session created');
   } catch (error) {
     next(error);
   }
 };
 
 // POST /api/payments/webhook
-// No protect middleware: called directly by the payment gateway,
-// authenticity is verified via HMAC signature instead of JWT.
+// Called server-to-server by the Vinti4 gateway when a payment succeeds/fails.
+// Uses HMAC signature validation instead of JWT authentication.
 const handleWebhook = async (req, res, next) => {
   try {
-    const { orderNumber, amount, status, signature } = req.body;
+    const signature = req.headers['x-vinti4-signature'];
 
-    const isValidSignature = verifyWebhookSignature({ orderNumber, amount }, signature);
-
-    if (!isValidSignature) {
-      console.warn(`Invalid webhook signature for order ${orderNumber}`);
-      return res.status(200).json({ received: true });
+    if (!verifyWebhookSignature(req.body, signature)) {
+      console.warn('Webhook signature mismatch', req.body);
+      return res.status(401).send('Invalid signature');
     }
+
+    const { orderNumber, status, gatewayReference } = req.body;
 
     const order = await Order.findOne({ orderNumber });
-
     if (!order) {
-      console.warn(`Webhook received for unknown order: ${orderNumber}`);
-      return res.status(200).json({ received: true });
+      console.error(`Webhook received for unknown order: ${orderNumber}`);
+      return res.status(200).send('Order not found but acknowledged'); // Don't retry
     }
 
-    if (Number(amount) !== order.total) {
-      console.error(`Amount mismatch for order ${orderNumber}: expected ${order.total}, got ${amount}`);
-      return res.status(200).json({ received: true });
-    }
-
-    // Avoid double-processing a duplicated webhook delivery.
-    if (order.paymentStatus === PAYMENT_STATUS.PAID) {
-      return res.status(200).json({ received: true, alreadyProcessed: true });
-    }
-
-    if (status === 'success') {
+    if (status === 'SUCCESS' && order.paymentStatus !== PAYMENT_STATUS.PAID) {
       order.paymentStatus = PAYMENT_STATUS.PAID;
       order.status = ORDER_STATUS.PAID;
-      order.statusHistory.push({ status: ORDER_STATUS.PAID, note: 'Payment confirmed via Vinti4' });
+      order.statusHistory.push({
+        status: ORDER_STATUS.PAID,
+        note: `Payment confirmed via Vinti4 (${gatewayReference})`,
+      });
 
       await order.save();
 
-      try {
-        await createNotification({
-          userId: order.user,
-          type: NOTIFICATION_TYPE.ORDER_STATUS_UPDATE,
-          data: { orderNumber: order.orderNumber, statusLabel: 'Pago' },
-          relatedOrder: order._id,
-        });
-      } catch (notificationError) {
-        console.error('Payment confirmation notification failed:', notificationError.message);
-      }
-    } else {
+      // Lazy import notification to avoid circular deps during webhook processing
+      const { createNotification } = await import('../services/notification.service.js');
+      const { NOTIFICATION_TYPE } = await import('../config/constants.js');
+
+      await createNotification({
+        userId: order.user,
+        type: NOTIFICATION_TYPE.ORDER_STATUS_UPDATE,
+        data: { orderNumber: order.orderNumber, statusLabel: 'Pago' },
+        relatedOrder: order._id,
+      }).catch((err) => console.error('Webhook notification failed:', err.message));
+    } else if (status === 'FAILED') {
       order.paymentStatus = PAYMENT_STATUS.FAILED;
       await order.save();
     }
 
-    return res.status(200).json({ received: true });
+    return res.status(200).send('OK');
   } catch (error) {
-    console.error('Payment webhook processing error:', error.message);
-    return res.status(200).json({ received: true });
+    console.error('Webhook error:', error);
+    // Return 500 so the gateway retries later
+    return res.status(500).send('Internal Server Error');
   }
 };
 
@@ -103,10 +99,10 @@ const getPaymentStatus = async (req, res, next) => {
 
     if (!order) return sendError(res, 'Order not found', 404);
 
-    return sendSuccess(res, { order }, 'Payment status fetched successfully');
+    return sendSuccess(res, { order }, 'Status fetched successfully');
   } catch (error) {
     next(error);
   }
 };
 
-module.exports = { initiatePayment, handleWebhook, getPaymentStatus };
+export { initiatePayment, handleWebhook, getPaymentStatus };

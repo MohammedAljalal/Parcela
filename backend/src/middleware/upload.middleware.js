@@ -1,7 +1,6 @@
 // Multer config: receives image files in memory before uploading to Cloudinary.
-'use strict';
 
-const multer = require('multer');
+import multer from 'multer';
 
 const storage = multer.memoryStorage();
 
@@ -20,4 +19,4 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
 });
 
-module.exports = upload;
+export default upload;

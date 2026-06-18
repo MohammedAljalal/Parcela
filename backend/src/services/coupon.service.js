@@ -1,8 +1,7 @@
 // Coupon validation and discount calculation logic.
-'use strict';
 
-const { Coupon } = require('../models');
-const { COUPON_TYPE } = require('../config/constants');
+import { Coupon } from '../models/index.js';
+import { COUPON_TYPE } from '../config/constants.js';
 
 const validateAndCalculateDiscount = async ({ code, userId, subtotal, productIds, categoryIds }) => {
   const coupon = await Coupon.findOne({ code: code.toUpperCase() });
@@ -49,4 +48,4 @@ const validateAndCalculateDiscount = async ({ code, userId, subtotal, productIds
   return { valid: true, coupon, discountAmount, freeDelivery };
 };
 
-module.exports = { validateAndCalculateDiscount };
+export { validateAndCalculateDiscount };

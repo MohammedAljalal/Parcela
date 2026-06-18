@@ -1,25 +1,24 @@
 // Central model loader. Import order matters: models referenced by
 // model('X') inside hooks must be registered before they are used.
-'use strict';
 
-const Island = require('./Island');
-const Category = require('./Category');
+import Island from './Island.js';
+import Category from './Category.js';
 
-const User = require('./User');
-const Product = require('./Product');
+import User from './User.js';
+import Product from './Product.js';
 
-const Address = require('./Address');
-const Cart = require('./Cart');
-const Coupon = require('./Coupon');
-const Banner = require('./Banner');
-const OtpLog = require('./OtpLog');
-const Notification = require('./Notification');
-const Wishlist = require('./Wishlist');
+import Address from './Address.js';
+import Cart from './Cart.js';
+import Coupon from './Coupon.js';
+import Banner from './Banner.js';
+import OtpLog from './OtpLog.js';
+import Notification from './Notification.js';
+import Wishlist from './Wishlist.js';
 
-const Order = require('./Order');
-const Review = require('./Review');
+import Order from './Order.js';
+import Review from './Review.js';
 
-module.exports = {
+export {
   Island,
   Category,
   User,

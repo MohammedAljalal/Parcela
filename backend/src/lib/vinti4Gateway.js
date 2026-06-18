@@ -1,9 +1,8 @@
 // Vinti4/Multibanco payment gateway integration (Cape Verde SISP system).
 // Follows the standard redirect + webhook pattern used by local payment gateways.
-'use strict';
 
-const crypto = require('crypto');
-const env = require('../config/env');
+import crypto from 'crypto';
+import env from '../config/env.js';
 
 // HMAC signature ties orderNumber + amount + merchantId to the secret key,
 // so a request cannot be tampered with in transit.
@@ -43,4 +42,4 @@ const verifyWebhookSignature = (payload, receivedSignature) => {
   return crypto.timingSafeEqual(expectedBuffer, receivedBuffer);
 };
 
-module.exports = { createPaymentSession, verifyWebhookSignature };
+export { createPaymentSession, verifyWebhookSignature };

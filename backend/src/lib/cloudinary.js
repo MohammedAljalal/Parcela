@@ -1,8 +1,7 @@
 // Cloudinary setup and image upload/delete helpers.
-'use strict';
 
-const cloudinary = require('cloudinary').v2;
-const env = require('../config/env');
+import { v2 as cloudinary } from 'cloudinary';
+import env from '../config/env.js';
 
 cloudinary.config({
   cloud_name: env.CLOUDINARY_CLOUD_NAME,
@@ -33,4 +32,4 @@ const deleteImage = async (publicId) => {
   await cloudinary.uploader.destroy(publicId);
 };
 
-module.exports = { uploadImage, deleteImage };
+export { uploadImage, deleteImage };

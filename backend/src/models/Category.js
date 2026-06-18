@@ -1,8 +1,7 @@
 // Product categories with i18n and computed product count.
-'use strict';
 
-const { Schema, model } = require('mongoose');
-const slugify = require('slugify');
+import { Schema, model } from 'mongoose';
+import slugify from 'slugify';
 
 const categorySchema = new Schema(
   {
@@ -48,4 +47,4 @@ categorySchema.statics.recalculateProductsCount = async function (categoryId) {
   await this.findByIdAndUpdate(categoryId, { productsCount: count });
 };
 
-module.exports = model('Category', categorySchema);
+export default model('Category', categorySchema);
