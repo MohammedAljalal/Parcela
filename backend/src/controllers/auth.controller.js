@@ -1,19 +1,32 @@
-// Authentication: phone+OTP login, Google OAuth, profile, logout.
+// Authentication: phone+OTP login, Google OAuth, profile read/update, logout, token refresh.
+'use strict';
 
-import { OAuth2Client } from 'google-auth-library';
-import { User, OtpLog } from '../models/index.js';
-import { generateToken } from '../config/jwt.js';
-import { sendSuccess, sendError } from '../utils/response.js';
-import { sendOtpSms } from '../lib/smsProvider.js';
-import generateOtp from '../utils/generateOtp.js';
-import { OTP } from '../config/constants.js';
-import env from '../config/env.js';
+const crypto = require('crypto');
+const { OAuth2Client } = require('google-auth-library');
+const { User, OtpLog } = require('../models');
+const { generateToken } = require('../config/jwt');
+const { sendSuccess, sendError } = require('../utils/response');
+const { sendOtpSms } = require('../lib/smsProvider');
+const generateOtp = require('../utils/generateOtp');
+const { OTP } = require('../config/constants');
+const env = require('../config/env');
 
 const googleClient = new OAuth2Client(env.GOOGLE_CLIENT_ID);
 
+// Generates a new access+refresh token pair and sets the refresh token hash on the user.
+// Returns { accessToken, rawRefreshToken } — caller must save the user after this.
+const issueTokenPair = (user) => {
+  const accessToken = generateToken({ id: user._id, role: user.role });
+  const rawRefreshToken = crypto.randomBytes(40).toString('hex');
+  const refreshTokenHash = crypto.createHash('sha256').update(rawRefreshToken).digest('hex');
+  user.refreshToken = refreshTokenHash;
+  return { accessToken, rawRefreshToken };
+};
+
 const createSendToken = (res, user, statusCode, message) => {
-  const token = generateToken({ id: user._id, role: user.role });
-  return sendSuccess(res, { token, user }, message, statusCode);
+  const { accessToken, rawRefreshToken } = issueTokenPair(user);
+  // refreshToken is returned once here; client should store it securely (e.g. httpOnly cookie or secure storage).
+  return sendSuccess(res, { token: accessToken, refreshToken: rawRefreshToken, user }, message, statusCode);
 };
 
 // POST /api/auth/otp/send
@@ -97,9 +110,15 @@ const verifyOtp = async (req, res, next) => {
     user.isVerified = true;
     user.lastLoginAt = new Date();
 
+    // issueTokenPair sets user.refreshToken hash; save before sending response.
+    const { accessToken, rawRefreshToken } = issueTokenPair(user);
     await user.save();
 
-    createSendToken(res, user, 200, isNewUser ? 'Account created and logged in' : 'Logged in successfully');
+    return sendSuccess(
+      res,
+      { token: accessToken, refreshToken: rawRefreshToken, user },
+      isNewUser ? 'Account created and logged in' : 'Logged in successfully'
+    );
   } catch (error) {
     next(error);
   }
@@ -134,9 +153,15 @@ const googleAuth = async (req, res, next) => {
     }
 
     user.lastLoginAt = new Date();
+    // issueTokenPair sets user.refreshToken hash; save before sending response.
+    const { accessToken, rawRefreshToken } = issueTokenPair(user);
     await user.save();
 
-    createSendToken(res, user, 200, 'Logged in successfully');
+    return sendSuccess(
+      res,
+      { token: accessToken, refreshToken: rawRefreshToken, user },
+      'Logged in successfully'
+    );
   } catch (error) {
     if (error.message?.includes('Token used too late') || error.message?.includes('Invalid token')) {
       return sendError(res, 'Google token is invalid or expired', 401);
@@ -156,10 +181,72 @@ const getMe = async (req, res, next) => {
   }
 };
 
+// PATCH /api/auth/me
+// Updates the editable profile fields visible in Image 9: name, language,
+// notificationsEnabled, avatar. Phone is changed via a separate OTP flow
+// (not implemented here), and role is never user-editable.
+const updateProfile = async (req, res, next) => {
+  try {
+    const { name, preferredLanguage, notificationsEnabled, avatar } = req.body;
+
+    const user = await User.findById(req.user._id);
+    if (!user) return sendError(res, 'User not found', 404);
+
+    // Only update fields that were actually sent.
+    if (name !== undefined) user.name = name;
+    if (preferredLanguage !== undefined) user.preferredLanguage = preferredLanguage;
+    if (notificationsEnabled !== undefined) user.notificationsEnabled = notificationsEnabled;
+    if (avatar !== undefined) user.avatar = avatar;
+
+    await user.save();
+
+    return sendSuccess(res, { user }, 'Profile updated successfully');
+  } catch (error) {
+    next(error);
+  }
+};
+
+// POST /api/auth/refresh
+// Rotates a refresh token: verifies the stored hash, issues new access + refresh tokens.
+// The refreshToken field already exists on the User schema but was previously unused.
+const refreshAccessToken = async (req, res, next) => {
+  try {
+    const { refreshToken } = req.body;
+
+    // Hash the incoming token before comparing with the stored hash.
+    const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
+
+    const user = await User.findOne({ refreshToken: tokenHash }).select('+refreshToken');
+
+    if (!user || !user.isActive) {
+      return sendError(res, 'Invalid or expired refresh token', 401);
+    }
+
+    // Rotate: generate a new refresh token and store its hash.
+    const newRawRefreshToken = crypto.randomBytes(40).toString('hex');
+    const newTokenHash = crypto.createHash('sha256').update(newRawRefreshToken).digest('hex');
+
+    user.refreshToken = newTokenHash;
+    await user.save();
+
+    const accessToken = generateToken({ id: user._id, role: user.role });
+
+    return sendSuccess(
+      res,
+      { token: accessToken, refreshToken: newRawRefreshToken },
+      'Token refreshed successfully'
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
 // POST /api/auth/logout
 const logout = async (req, res, next) => {
   try {
+    // Invalidate refresh token on logout so it cannot be reused.
     req.user.fcmToken = null;
+    req.user.refreshToken = null;
     await req.user.save();
     return sendSuccess(res, {}, 'Logged out successfully');
   } catch (error) {
@@ -167,4 +254,4 @@ const logout = async (req, res, next) => {
   }
 };
 
-export { sendOtp, verifyOtp, googleAuth, getMe, logout };
+module.exports = { sendOtp, verifyOtp, googleAuth, getMe, updateProfile, refreshAccessToken, logout };

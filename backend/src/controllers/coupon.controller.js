@@ -1,28 +1,19 @@
-// Manages discount coupons and exposes a preview endpoint to test a code
-// against the user's current cart before checkout.
+// Manages coupons (admin CRUD) and coupon preview for customers.
+'use strict';
 
-import { Coupon, Cart } from '../models/index.js';
-import { validateAndCalculateDiscount } from '../services/coupon.service.js';
-import { sendSuccess, sendError, sendPaginated } from '../utils/response.js';
+const { Coupon, Cart } = require('../models');
+const { sendSuccess, sendError, sendPaginated } = require('../utils/response');
+const { validateAndCalculateDiscount } = require('../services/coupon.service');
 
-// GET /api/coupons (Admin only)
+// GET /api/coupons
 const getCoupons = async (req, res, next) => {
   try {
-    const { page = 1, limit = 20, isActive } = req.query;
-
-    const filter = {};
-    if (isActive !== undefined) filter.isActive = isActive === 'true';
-
-    const skip = (Number(page) - 1) * Number(limit);
+    const { page = 1, limit = 20 } = req.query;
+    const skip = (page - 1) * limit;
 
     const [coupons, total] = await Promise.all([
-      Coupon.find(filter)
-        .populate('applicableCategories', 'name slug')
-        .populate('applicableProducts', 'name slug')
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(Number(limit)),
-      Coupon.countDocuments(filter),
+      Coupon.find().sort({ createdAt: -1 }).skip(skip).limit(Number(limit)),
+      Coupon.countDocuments(),
     ]);
 
     return sendPaginated(res, coupons, { total, page: Number(page), limit: Number(limit) });
@@ -31,11 +22,11 @@ const getCoupons = async (req, res, next) => {
   }
 };
 
-// POST /api/coupons (Admin only)
+// POST /api/coupons
 const createCoupon = async (req, res, next) => {
   try {
-    const exists = await Coupon.findOne({ code: req.body.code.toUpperCase() });
-    if (exists) return sendError(res, 'A coupon with this code already exists', 409);
+    const existingCoupon = await Coupon.findOne({ code: req.body.code });
+    if (existingCoupon) return sendError(res, 'A coupon with this code already exists', 409);
 
     const coupon = await Coupon.create(req.body);
     return sendSuccess(res, { coupon }, 'Coupon created successfully', 201);
@@ -44,15 +35,11 @@ const createCoupon = async (req, res, next) => {
   }
 };
 
-// PUT /api/coupons/:id (Admin only)
+// PUT /api/coupons/:id
 const updateCoupon = async (req, res, next) => {
   try {
     const coupon = await Coupon.findById(req.params.id);
     if (!coupon) return sendError(res, 'Coupon not found', 404);
-
-    if (req.body.code) {
-      delete req.body.code; // Code cannot be changed once created
-    }
 
     Object.assign(coupon, req.body);
     await coupon.save();
@@ -63,20 +50,19 @@ const updateCoupon = async (req, res, next) => {
   }
 };
 
-// DELETE /api/coupons/:id (Admin only)
+// DELETE /api/coupons/:id
 const deleteCoupon = async (req, res, next) => {
   try {
     const coupon = await Coupon.findById(req.params.id);
     if (!coupon) return sendError(res, 'Coupon not found', 404);
 
+    // Used coupons are referenced by past orders, disable instead of deleting.
     if (coupon.usedCount > 0) {
-      // Soft delete if already used
-      coupon.isActive = false;
-      await coupon.save();
-      return sendSuccess(res, {}, 'Coupon disabled (cannot delete because it was already used)');
+      return sendError(res, 'Cannot delete a used coupon, disable it instead', 409);
     }
 
-    await Coupon.findByIdAndDelete(coupon._id);
+    await coupon.deleteOne();
+
     return sendSuccess(res, {}, 'Coupon deleted successfully');
   } catch (error) {
     next(error);
@@ -84,19 +70,15 @@ const deleteCoupon = async (req, res, next) => {
 };
 
 // POST /api/coupons/preview
-// Simulates applying a coupon to the current user's cart without creating an order.
 const previewCoupon = async (req, res, next) => {
   try {
     const { code } = req.body;
 
-    const cart = await Cart.findOne({ user: req.user._id }).populate('items.product');
+    const cart = await Cart.findOne({ user: req.user._id }).populate('items.product', 'category');
+    if (!cart || cart.items.length === 0) return sendError(res, 'Cart is empty, cannot preview coupon', 400);
 
-    if (!cart || cart.items.length === 0) {
-      return sendError(res, 'Cart is empty', 400);
-    }
-
-    const productIds = cart.items.map((i) => i.product._id.toString());
-    const categoryIds = cart.items.map((i) => i.product.category.toString());
+    const productIds = cart.items.map((item) => item.product._id.toString());
+    const categoryIds = cart.items.map((item) => item.product.category.toString());
 
     const result = await validateAndCalculateDiscount({
       code,
@@ -106,24 +88,20 @@ const previewCoupon = async (req, res, next) => {
       categoryIds,
     });
 
-    if (!result.valid) {
-      return sendError(res, result.message, 400);
-    }
+    if (!result.valid) return sendError(res, result.message, 422);
 
-    const preview = {
-      code: result.coupon.code,
-      type: result.coupon.type,
-      value: result.coupon.value,
-      discountAmount: result.discountAmount,
-      freeDelivery: result.freeDelivery,
-      subtotalBeforeDiscount: cart.subtotal,
-      subtotalAfterDiscount: Math.max(cart.subtotal - result.discountAmount, 0),
-    };
-
-    return sendSuccess(res, { preview }, 'Coupon can be applied');
+    return sendSuccess(
+      res,
+      {
+        discountAmount: result.discountAmount,
+        freeDelivery: result.freeDelivery,
+        newTotal: cart.subtotal - result.discountAmount,
+      },
+      'Coupon is valid'
+    );
   } catch (error) {
     next(error);
   }
 };
 
-export { getCoupons, createCoupon, updateCoupon, deleteCoupon, previewCoupon };
+module.exports = { getCoupons, createCoupon, updateCoupon, deleteCoupon, previewCoupon };

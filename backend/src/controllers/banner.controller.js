@@ -1,30 +1,26 @@
 // Manages promotional banners. Public read, admin-only write.
+'use strict';
 
-import { Banner, Island } from '../models/index.js';
-import { sendSuccess, sendError } from '../utils/response.js';
-import { uploadImage, deleteImage } from '../lib/cloudinary.js';
+const { Banner, Island } = require('../models');
+const { sendSuccess, sendError } = require('../utils/response');
+const { uploadImage, deleteImage } = require('../lib/cloudinary');
 
 // GET /api/banners
-// Returns active banners. Optionally filters by island.
 const getActiveBanners = async (req, res, next) => {
   try {
-    const { islandId } = req.query;
-
-    const filter = { isActive: true };
+    const { island } = req.query;
     const now = new Date();
 
-    filter.$and = [
-      { $or: [{ startDate: null }, { startDate: { $lte: now } }] },
-      { $or: [{ endDate: null }, { endDate: { $gte: now } }] },
-    ];
+    const filter = {
+      isActive: true,
+      $or: [{ island: null }, ...(island ? [{ island }] : [])],
+      $and: [
+        { $or: [{ startDate: null }, { startDate: { $lte: now } }] },
+        { $or: [{ endDate: null }, { endDate: { $gte: now } }] },
+      ],
+    };
 
-    if (islandId) {
-      filter.$or = [{ island: null }, { island: islandId }];
-    }
-
-    const banners = await Banner.find(filter)
-      .populate('island', 'name code')
-      .sort({ sortOrder: 1, createdAt: -1 });
+    const banners = await Banner.find(filter).populate('island', 'name code').sort({ sortOrder: 1 });
 
     return sendSuccess(res, { banners }, 'Banners fetched successfully');
   } catch (error) {
@@ -33,7 +29,6 @@ const getActiveBanners = async (req, res, next) => {
 };
 
 // GET /api/banners/admin/all
-// Admin only: returns all banners, active or not.
 const getAllBanners = async (req, res, next) => {
   try {
     const banners = await Banner.find().populate('island', 'name code').sort({ sortOrder: 1, createdAt: -1 });
@@ -46,20 +41,19 @@ const getAllBanners = async (req, res, next) => {
 // POST /api/banners
 const createBanner = async (req, res, next) => {
   try {
-    if (!req.file) return sendError(res, 'Banner image is required', 400);
-
     if (req.body.island) {
-      const islandExists = await Island.exists({ _id: req.body.island, isActive: true });
-      if (!islandExists) return sendError(res, 'Selected island not found or inactive', 404);
+      const island = await Island.findById(req.body.island);
+      if (!island) return sendError(res, 'Selected island not found', 404);
     }
 
-    const uploadResult = await uploadImage(req.file.buffer, 'banners');
+    let imageData = { image: req.body.image, imagePublicId: '' };
 
-    const banner = await Banner.create({
-      ...req.body,
-      image: uploadResult.secure_url,
-      imagePublicId: uploadResult.public_id,
-    });
+    if (req.file) {
+      const result = await uploadImage(req.file.buffer, 'banners');
+      imageData = { image: result.secure_url, imagePublicId: result.public_id };
+    }
+
+    const banner = await Banner.create({ ...req.body, ...imageData });
 
     return sendSuccess(res, { banner }, 'Banner created successfully', 201);
   } catch (error) {
@@ -74,19 +68,15 @@ const updateBanner = async (req, res, next) => {
     if (!banner) return sendError(res, 'Banner not found', 404);
 
     if (req.body.island) {
-      const islandExists = await Island.exists({ _id: req.body.island, isActive: true });
-      if (!islandExists) return sendError(res, 'Selected island not found or inactive', 404);
+      const island = await Island.findById(req.body.island);
+      if (!island) return sendError(res, 'Selected island not found', 404);
     }
 
     if (req.file) {
-      const uploadResult = await uploadImage(req.file.buffer, 'banners');
-
-      if (banner.imagePublicId) {
-        await deleteImage(banner.imagePublicId);
-      }
-
-      req.body.image = uploadResult.secure_url;
-      req.body.imagePublicId = uploadResult.public_id;
+      await deleteImage(banner.imagePublicId);
+      const result = await uploadImage(req.file.buffer, 'banners');
+      req.body.image = result.secure_url;
+      req.body.imagePublicId = result.public_id;
     }
 
     Object.assign(banner, req.body);
@@ -104,9 +94,7 @@ const deleteBanner = async (req, res, next) => {
     const banner = await Banner.findByIdAndDelete(req.params.id);
     if (!banner) return sendError(res, 'Banner not found', 404);
 
-    if (banner.imagePublicId) {
-      await deleteImage(banner.imagePublicId);
-    }
+    await deleteImage(banner.imagePublicId);
 
     return sendSuccess(res, {}, 'Banner deleted successfully');
   } catch (error) {
@@ -114,4 +102,4 @@ const deleteBanner = async (req, res, next) => {
   }
 };
 
-export { getActiveBanners, getAllBanners, createBanner, updateBanner, deleteBanner };
+module.exports = { getActiveBanners, getAllBanners, createBanner, updateBanner, deleteBanner };

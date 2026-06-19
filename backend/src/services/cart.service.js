@@ -1,6 +1,7 @@
 // Shared cart calculation logic, used by cart and order controllers.
+'use strict';
 
-import { Cart } from '../models/index.js';
+const { Cart } = require('../models');
 
 // Builds the full cart response with computed totals.
 const buildCartResponse = async (userId) => {
@@ -50,4 +51,4 @@ const validateStockAvailability = async (cart) => {
   return issues;
 };
 
-export { buildCartResponse, validateStockAvailability };
+module.exports = { buildCartResponse, validateStockAvailability };

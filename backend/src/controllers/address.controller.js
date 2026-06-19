@@ -1,7 +1,8 @@
 // Manages a user's saved delivery addresses.
+'use strict';
 
-import { Address, Island } from '../models/index.js';
-import { sendSuccess, sendError } from '../utils/response.js';
+const { Address, Island } = require('../models');
+const { sendSuccess, sendError } = require('../utils/response');
 
 // GET /api/addresses
 const getAddresses = async (req, res, next) => {
@@ -109,4 +110,4 @@ const setDefaultAddress = async (req, res, next) => {
   }
 };
 
-export { getAddresses, getAddressById, createAddress, updateAddress, deleteAddress, setDefaultAddress };
+module.exports = { getAddresses, getAddressById, createAddress, updateAddress, deleteAddress, setDefaultAddress };

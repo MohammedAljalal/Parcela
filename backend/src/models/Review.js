@@ -1,6 +1,7 @@
 // Product reviews from verified purchasers only.
+'use strict';
 
-import mongoose, { Schema, model } from 'mongoose';
+const { Schema, model } = require('mongoose');
 
 const reviewSchema = new Schema(
   {
@@ -36,7 +37,7 @@ reviewSchema.post('findOneAndDelete', async function (doc) {
 });
 
 async function updateProductRating(ReviewModel, productId) {
-  const Product = mongoose.model('Product');
+  const Product = require('mongoose').model('Product');
 
   const stats = await ReviewModel.aggregate([
     { $match: { product: productId, isActive: true } },
@@ -52,4 +53,4 @@ async function updateProductRating(ReviewModel, productId) {
   });
 }
 
-export default model('Review', reviewSchema);
+module.exports = model('Review', reviewSchema);

@@ -1,7 +1,8 @@
 // SMS sending abstraction. Simulated in development, replace with a real
 // provider (e.g. Twilio) in production without touching calling code.
+'use strict';
 
-import env from '../config/env.js';
+const env = require('../config/env');
 
 const sendOtpSms = async (phone, code) => {
   if (env.NODE_ENV === 'development') {
@@ -16,4 +17,4 @@ const sendOtpSms = async (phone, code) => {
   throw new Error('SMS provider is not configured for production');
 };
 
-export { sendOtpSms };
+module.exports = { sendOtpSms };

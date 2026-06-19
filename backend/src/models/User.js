@@ -1,8 +1,9 @@
 // User account: phone+OTP login, Google OAuth, or email+password.
+'use strict';
 
-import { Schema, model } from 'mongoose';
-import bcrypt from 'bcryptjs';
-import { ROLES, LANGUAGES, OTP } from '../config/constants.js';
+const { Schema, model } = require('mongoose');
+const bcrypt = require('bcryptjs');
+const { ROLES, LANGUAGES, OTP } = require('../config/constants');
 
 const userSchema = new Schema(
   {
@@ -31,7 +32,12 @@ const userSchema = new Schema(
       attempts: { type: Number, default: 0, select: false },
     },
 
-    refreshToken: { type: String, select: false },
+    refreshToken: {
+      // Stores SHA-256 hash of the raw refresh token, never the token itself.
+      // Rotated on every /api/auth/refresh call and cleared on logout.
+      type: String,
+      select: false,
+    },
 
     preferredIsland: { type: Schema.Types.ObjectId, ref: 'Island' },
     preferredLanguage: { type: String, enum: Object.values(LANGUAGES), default: LANGUAGES.PT },
@@ -85,4 +91,4 @@ userSchema.methods.isOtpValid = function (code) {
   );
 };
 
-export default model('User', userSchema);
+module.exports = model('User', userSchema);

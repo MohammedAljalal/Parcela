@@ -1,7 +1,8 @@
 // Centralized notification creation with bilingual templates.
+'use strict';
 
-import mongoose from 'mongoose';
-import { NOTIFICATION_TYPE } from '../config/constants.js';
+const { Notification } = require('../models');
+const { NOTIFICATION_TYPE } = require('../config/constants');
 
 const TEMPLATES = {
   [NOTIFICATION_TYPE.ORDER_CONFIRMED]: (data) => ({
@@ -48,8 +49,6 @@ const createNotification = async ({ userId, type, data = {}, relatedOrder = null
 
   const { title, body } = template(data);
 
-  // Use mongoose.model() to avoid circular dependency with models/index.js
-  const Notification = mongoose.model('Notification');
   const notification = await Notification.create({ user: userId, type, title, body, data });
 
   await sendPushNotificationSafely(userId, title, body);
@@ -63,7 +62,6 @@ const createBulkNotification = async ({ userIds, type, data = {} }) => {
 
   const { title, body } = template(data);
 
-  const Notification = mongoose.model('Notification');
   const notifications = userIds.map((userId) => ({ user: userId, type, title, body, data }));
   await Notification.insertMany(notifications);
 };
@@ -71,7 +69,7 @@ const createBulkNotification = async ({ userIds, type, data = {} }) => {
 // Push failures must never break the calling operation.
 const sendPushNotificationSafely = async (userId, title, body) => {
   try {
-    const User = mongoose.model('User');
+    const { User } = require('../models');
     const user = await User.findById(userId).select('+fcmToken notificationsEnabled');
 
     if (!user || !user.fcmToken || !user.notificationsEnabled) return;
@@ -83,4 +81,4 @@ const sendPushNotificationSafely = async (userId, title, body) => {
   }
 };
 
-export { createNotification, createBulkNotification };
+module.exports = { createNotification, createBulkNotification };

@@ -1,19 +1,21 @@
 // Order routes, all protected, some admin-only.
+'use strict';
 
-import { Router } from 'express';
-import {
+const express = require('express');
+const router = express.Router();
+
+const {
   createOrder,
   getMyOrders,
   getOrderById,
   cancelOrder,
   updateOrderStatus,
   getAllOrders,
-} from '../controllers/order.controller.js';
-import { protect, restrictTo } from '../middleware/auth.middleware.js';
-import validate from '../middleware/validate.js';
-import { createOrderSchema, updateOrderStatusSchema } from '../validators/order.validator.js';
+} = require('../controllers/order.controller');
 
-const router = Router();
+const { protect, restrictTo } = require('../middleware/auth.middleware');
+const validate = require('../middleware/validate');
+const { createOrderSchema, updateOrderStatusSchema } = require('../validators/order.validator');
 
 router.use(protect);
 
@@ -23,7 +25,12 @@ router.get('/admin/all', restrictTo('admin'), getAllOrders);
 router.post('/', validate(createOrderSchema), createOrder);
 router.get('/', getMyOrders);
 router.get('/:id', getOrderById);
-router.put('/:id/cancel', cancelOrder);
-router.put('/:id/status', restrictTo('admin'), validate(updateOrderStatusSchema), updateOrderStatus);
 
-export default router;
+// Both PUT and PATCH accepted for cancel — PUT kept for backward compatibility.
+router.put('/:id/cancel', cancelOrder);
+router.patch('/:id/cancel', cancelOrder);
+
+router.put('/:id/status', restrictTo('admin'), validate(updateOrderStatusSchema), updateOrderStatus);
+router.patch('/:id/status', restrictTo('admin'), validate(updateOrderStatusSchema), updateOrderStatus);
+
+module.exports = router;

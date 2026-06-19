@@ -1,7 +1,8 @@
 // Tracks OTP send attempts per phone for rate limiting / abuse detection.
+'use strict';
 
-import { Schema, model } from 'mongoose';
-import { OTP } from '../config/constants.js';
+const { Schema, model } = require('mongoose');
+const { OTP } = require('../config/constants');
 
 const otpLogSchema = new Schema(
   {
@@ -29,4 +30,4 @@ otpLogSchema.methods.mustWait = function () {
   return Date.now() - this.lastSentAt.getTime() < waitMs;
 };
 
-export default model('OtpLog', otpLogSchema);
+module.exports = model('OtpLog', otpLogSchema);

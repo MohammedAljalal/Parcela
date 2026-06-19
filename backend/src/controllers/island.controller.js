@@ -1,7 +1,8 @@
 // Manages delivery islands. Public read, admin-only write.
+'use strict';
 
-import { Island } from '../models/index.js';
-import { sendSuccess, sendError } from '../utils/response.js';
+const { Island } = require('../models');
+const { sendSuccess, sendError } = require('../utils/response');
 
 // GET /api/islands
 const getIslands = async (req, res, next) => {
@@ -77,4 +78,4 @@ const deleteIsland = async (req, res, next) => {
   }
 };
 
-export { getIslands, getIslandById, createIsland, updateIsland, deleteIsland };
+module.exports = { getIslands, getIslandById, createIsland, updateIsland, deleteIsland };

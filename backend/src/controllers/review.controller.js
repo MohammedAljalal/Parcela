@@ -1,8 +1,9 @@
 // Manages product reviews, restricted to verified (delivered order) purchases.
+'use strict';
 
-import { Review, Order } from '../models/index.js';
-import { sendSuccess, sendError, sendPaginated } from '../utils/response.js';
-import { ORDER_STATUS } from '../config/constants.js';
+const { Review, Order } = require('../models');
+const { sendSuccess, sendError, sendPaginated } = require('../utils/response');
+const { ORDER_STATUS } = require('../config/constants');
 
 // GET /api/reviews/product/:productId
 const getProductReviews = async (req, res, next) => {
@@ -89,4 +90,4 @@ const getMyReviews = async (req, res, next) => {
   }
 };
 
-export { getProductReviews, createReview, updateReview, deleteReview, getMyReviews };
+module.exports = { getProductReviews, createReview, updateReview, deleteReview, getMyReviews };

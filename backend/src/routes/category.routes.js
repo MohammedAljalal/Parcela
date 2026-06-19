@@ -1,18 +1,20 @@
 // Category routes: public read, admin-only write.
+'use strict';
 
-import { Router } from 'express';
-import {
+const express = require('express');
+const router = express.Router();
+
+const {
   getCategories,
   getCategoryBySlug,
   createCategory,
   updateCategory,
   deleteCategory,
-} from '../controllers/category.controller.js';
-import { protect, restrictTo } from '../middleware/auth.middleware.js';
-import validate from '../middleware/validate.js';
-import { createCategorySchema, updateCategorySchema } from '../validators/category.validator.js';
+} = require('../controllers/category.controller');
 
-const router = Router();
+const { protect, restrictTo } = require('../middleware/auth.middleware');
+const validate = require('../middleware/validate');
+const { createCategorySchema, updateCategorySchema } = require('../validators/category.validator');
 
 router.get('/', getCategories);
 router.get('/:slug', getCategoryBySlug);
@@ -21,4 +23,4 @@ router.post('/', protect, restrictTo('admin'), validate(createCategorySchema), c
 router.put('/:id', protect, restrictTo('admin'), validate(updateCategorySchema), updateCategory);
 router.delete('/:id', protect, restrictTo('admin'), deleteCategory);
 
-export default router;
+module.exports = router;

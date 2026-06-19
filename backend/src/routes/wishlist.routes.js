@@ -1,10 +1,11 @@
 // Wishlist routes, all protected (personal data).
+'use strict';
 
-import { Router } from 'express';
-import { getWishlist, addToWishlist, removeFromWishlist, checkInWishlist } from '../controllers/wishlist.controller.js';
-import { protect } from '../middleware/auth.middleware.js';
+const express = require('express');
+const router = express.Router();
 
-const router = Router();
+const { getWishlist, addToWishlist, removeFromWishlist, checkInWishlist } = require('../controllers/wishlist.controller');
+const { protect } = require('../middleware/auth.middleware');
 
 router.use(protect);
 
@@ -13,4 +14,4 @@ router.get('/check/:productId', checkInWishlist);
 router.post('/:productId', addToWishlist);
 router.delete('/:productId', removeFromWishlist);
 
-export default router;
+module.exports = router;

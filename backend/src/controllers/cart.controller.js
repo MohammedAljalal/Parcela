@@ -1,14 +1,15 @@
-// Cart logic: add, update quantity, remove, and island selection.
+// Manages the current user's shopping cart.
+'use strict';
 
-import { Cart, Product, Island } from '../models/index.js';
-import { sendSuccess, sendError } from '../utils/response.js';
-import { buildCartResponse } from '../services/cart.service.js';
+const { Cart, Product, Island } = require('../models');
+const { sendSuccess, sendError } = require('../utils/response');
+const { buildCartResponse } = require('../services/cart.service');
 
 // GET /api/cart
 const getCart = async (req, res, next) => {
   try {
-    const cartResponse = await buildCartResponse(req.user._id);
-    return sendSuccess(res, { cart: cartResponse }, 'Cart fetched successfully');
+    const cartData = await buildCartResponse(req.user._id);
+    return sendSuccess(res, { cart: cartData }, 'Cart fetched successfully');
   } catch (error) {
     next(error);
   }
@@ -17,39 +18,41 @@ const getCart = async (req, res, next) => {
 // POST /api/cart/items
 const addItem = async (req, res, next) => {
   try {
-    const { productId, quantity = 1 } = req.body;
+    const { productId, quantity } = req.body;
 
     const product = await Product.findOne({ _id: productId, isActive: true });
     if (!product) return sendError(res, 'Product not found or unavailable', 404);
 
     if (product.stock < quantity) {
-      return sendError(res, `Only ${product.stock} items left in stock`, 409);
+      return sendError(res, `Requested quantity exceeds available stock (${product.stock})`, 409);
     }
 
     let cart = await Cart.findOne({ user: req.user._id });
+    if (!cart) cart = await Cart.create({ user: req.user._id, items: [] });
 
-    if (!cart) {
-      cart = await Cart.create({ user: req.user._id, items: [] });
-    }
+    const existingItem = cart.items.find((item) => item.product.toString() === productId);
 
-    const itemIndex = cart.items.findIndex((item) => item.product.toString() === productId);
-    const newPrice = product.isOnSale ? product.price : product.price; // or compareAtPrice if logic differs
+    if (existingItem) {
+      const newQuantity = existingItem.quantity + quantity;
 
-    if (itemIndex > -1) {
-      const newQuantity = cart.items[itemIndex].quantity + quantity;
       if (product.stock < newQuantity) {
-        return sendError(res, `Cannot add more. Only ${product.stock} items left in stock`, 409);
+        return sendError(
+          res,
+          `Total requested quantity (${newQuantity}) exceeds available stock (${product.stock})`,
+          409
+        );
       }
-      cart.items[itemIndex].quantity = newQuantity;
-      cart.items[itemIndex].price = newPrice;
+
+      existingItem.quantity = newQuantity;
+      existingItem.price = product.price;
     } else {
-      cart.items.push({ product: productId, quantity, price: newPrice });
+      cart.items.push({ product: product._id, quantity, price: product.price });
     }
 
     await cart.save();
 
-    const cartResponse = await buildCartResponse(req.user._id);
-    return sendSuccess(res, { cart: cartResponse }, 'Item added to cart', 201);
+    const cartData = await buildCartResponse(req.user._id);
+    return sendSuccess(res, { cart: cartData }, 'Item added to cart');
   } catch (error) {
     next(error);
   }
@@ -64,19 +67,21 @@ const updateItemQuantity = async (req, res, next) => {
     const cart = await Cart.findOne({ user: req.user._id });
     if (!cart) return sendError(res, 'Cart not found', 404);
 
-    const itemIndex = cart.items.findIndex((item) => item.product.toString() === productId);
-    if (itemIndex === -1) return sendError(res, 'Item not found in cart', 404);
+    const item = cart.items.find((i) => i.product.toString() === productId);
+    if (!item) return sendError(res, 'Product not found in cart', 404);
 
     const product = await Product.findById(productId);
+    if (!product || !product.isActive) return sendError(res, 'Product is no longer available', 404);
+
     if (product.stock < quantity) {
-      return sendError(res, `Cannot update. Only ${product.stock} items left in stock`, 409);
+      return sendError(res, `Requested quantity exceeds available stock (${product.stock})`, 409);
     }
 
-    cart.items[itemIndex].quantity = quantity;
+    item.quantity = quantity;
     await cart.save();
 
-    const cartResponse = await buildCartResponse(req.user._id);
-    return sendSuccess(res, { cart: cartResponse }, 'Cart updated successfully');
+    const cartData = await buildCartResponse(req.user._id);
+    return sendSuccess(res, { cart: cartData }, 'Quantity updated successfully');
   } catch (error) {
     next(error);
   }
@@ -88,11 +93,14 @@ const removeItem = async (req, res, next) => {
     const cart = await Cart.findOne({ user: req.user._id });
     if (!cart) return sendError(res, 'Cart not found', 404);
 
-    cart.items = cart.items.filter((item) => item.product.toString() !== req.params.productId);
+    const itemExists = cart.items.some((i) => i.product.toString() === req.params.productId);
+    if (!itemExists) return sendError(res, 'Product not found in cart', 404);
+
+    cart.items = cart.items.filter((i) => i.product.toString() !== req.params.productId);
     await cart.save();
 
-    const cartResponse = await buildCartResponse(req.user._id);
-    return sendSuccess(res, { cart: cartResponse }, 'Item removed from cart');
+    const cartData = await buildCartResponse(req.user._id);
+    return sendSuccess(res, { cart: cartData }, 'Item removed from cart');
   } catch (error) {
     next(error);
   }
@@ -104,18 +112,16 @@ const setDeliveryIsland = async (req, res, next) => {
     const { islandId } = req.body;
 
     const island = await Island.findOne({ _id: islandId, isActive: true });
-    if (!island) return sendError(res, 'Selected island is not available', 404);
+    if (!island) return sendError(res, 'Selected island not found or unavailable', 404);
 
     let cart = await Cart.findOne({ user: req.user._id });
-    if (!cart) {
-      cart = await Cart.create({ user: req.user._id, items: [] });
-    }
+    if (!cart) cart = await Cart.create({ user: req.user._id, items: [] });
 
-    cart.deliveryIsland = islandId;
+    cart.deliveryIsland = island._id;
     await cart.save();
 
-    const cartResponse = await buildCartResponse(req.user._id);
-    return sendSuccess(res, { cart: cartResponse }, 'Delivery island updated');
+    const cartData = await buildCartResponse(req.user._id);
+    return sendSuccess(res, { cart: cartData }, 'Delivery island set successfully');
   } catch (error) {
     next(error);
   }
@@ -124,12 +130,17 @@ const setDeliveryIsland = async (req, res, next) => {
 // DELETE /api/cart
 const clearCart = async (req, res, next) => {
   try {
-    await Cart.findOneAndUpdate({ user: req.user._id }, { items: [], deliveryIsland: null });
-    const cartResponse = await buildCartResponse(req.user._id);
-    return sendSuccess(res, { cart: cartResponse }, 'Cart cleared successfully');
+    const cart = await Cart.findOne({ user: req.user._id });
+
+    if (cart) {
+      cart.items = [];
+      await cart.save();
+    }
+
+    return sendSuccess(res, {}, 'Cart cleared successfully');
   } catch (error) {
     next(error);
   }
 };
 
-export { getCart, addItem, updateItemQuantity, removeItem, setDeliveryIsland, clearCart };
+module.exports = { getCart, addItem, updateItemQuantity, removeItem, setDeliveryIsland, clearCart };

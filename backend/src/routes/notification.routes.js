@@ -1,12 +1,13 @@
 // Notification routes, all protected (personal data).
+'use strict';
 
-import { Router } from 'express';
-import { getMyNotifications, markAsRead, markAllAsRead, deleteNotification } from '../controllers/notification.controller.js';
-import { protect } from '../middleware/auth.middleware.js';
-import validate from '../middleware/validate.js';
-import { listNotificationsQuerySchema } from '../validators/notification.validator.js';
+const express = require('express');
+const router = express.Router();
 
-const router = Router();
+const { getMyNotifications, markAsRead, markAllAsRead, deleteNotification } = require('../controllers/notification.controller');
+const { protect } = require('../middleware/auth.middleware');
+const validate = require('../middleware/validate');
+const { listNotificationsQuerySchema } = require('../validators/notification.validator');
 
 router.use(protect);
 
@@ -15,4 +16,4 @@ router.put('/read-all', markAllAsRead);
 router.put('/:id/read', markAsRead);
 router.delete('/:id', deleteNotification);
 
-export default router;
+module.exports = router;
