@@ -1,7 +1,8 @@
 // JWT sign/verify helpers.
+'use strict';
 
-import jwt from 'jsonwebtoken';
-import env from './env.js';
+const jwt = require('jsonwebtoken');
+const env = require('./env');
 
 const generateToken = (payload) => {
   return jwt.sign(payload, env.JWT_SECRET, { expiresIn: env.JWT_EXPIRES_IN });
@@ -12,4 +13,4 @@ const verifyToken = (token) => {
   return jwt.verify(token, env.JWT_SECRET);
 };
 
-export { generateToken, verifyToken };
+module.exports = { generateToken, verifyToken };

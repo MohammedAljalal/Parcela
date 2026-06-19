@@ -1,13 +1,14 @@
 // Banner routes: public read, admin-only write with image upload.
+'use strict';
 
-import { Router } from 'express';
-import { getActiveBanners, getAllBanners, createBanner, updateBanner, deleteBanner } from '../controllers/banner.controller.js';
-import { protect, restrictTo } from '../middleware/auth.middleware.js';
-import validate from '../middleware/validate.js';
-import upload from '../middleware/upload.middleware.js';
-import { createBannerSchema, updateBannerSchema } from '../validators/banner.validator.js';
+const express = require('express');
+const router = express.Router();
 
-const router = Router();
+const { getActiveBanners, getAllBanners, createBanner, updateBanner, deleteBanner } = require('../controllers/banner.controller');
+const { protect, restrictTo } = require('../middleware/auth.middleware');
+const validate = require('../middleware/validate');
+const upload = require('../middleware/upload.middleware');
+const { createBannerSchema, updateBannerSchema } = require('../validators/banner.validator');
 
 router.get('/', getActiveBanners);
 router.get('/admin/all', protect, restrictTo('admin'), getAllBanners);
@@ -16,4 +17,4 @@ router.post('/', protect, restrictTo('admin'), upload.single('image'), validate(
 router.put('/:id', protect, restrictTo('admin'), upload.single('image'), validate(updateBannerSchema), updateBanner);
 router.delete('/:id', protect, restrictTo('admin'), deleteBanner);
 
-export default router;
+module.exports = router;

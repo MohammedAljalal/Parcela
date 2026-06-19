@@ -1,6 +1,7 @@
 // Cape Verde islands available for delivery.
+'use strict';
 
-import { Schema, model } from 'mongoose';
+const { Schema, model } = require('mongoose');
 
 const islandSchema = new Schema(
   {
@@ -33,4 +34,4 @@ islandSchema.virtual('estimatedDeliveryLabel').get(function () {
   return min === max ? `${min * 24}h` : `${min * 24}/${max * 24}h`;
 });
 
-export default model('Island', islandSchema);
+module.exports = model('Island', islandSchema);

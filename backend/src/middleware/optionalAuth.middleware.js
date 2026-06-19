@@ -1,9 +1,10 @@
 // Optional authentication: attaches req.user if a valid token is present,
 // but never rejects the request. Useful for public routes with slightly
 // different behavior for logged-in users (e.g. admins).
+'use strict';
 
-import { verifyToken } from '../config/jwt.js';
-import { User } from '../models/index.js';
+const { verifyToken } = require('../config/jwt');
+const { User } = require('../models');
 
 const optionalAuth = async (req, res, next) => {
   try {
@@ -28,4 +29,4 @@ const optionalAuth = async (req, res, next) => {
   }
 };
 
-export default optionalAuth;
+module.exports = optionalAuth;

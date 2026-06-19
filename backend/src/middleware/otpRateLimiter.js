@@ -1,7 +1,8 @@
 // Rate limits OTP send requests per IP to prevent abuse.
+'use strict';
 
-import rateLimit from 'express-rate-limit';
-import { sendError } from '../utils/response.js';
+const rateLimit = require('express-rate-limit');
+const { sendError } = require('../utils/response');
 
 const otpRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -13,4 +14,4 @@ const otpRateLimiter = rateLimit({
   },
 });
 
-export default otpRateLimiter;
+module.exports = otpRateLimiter;

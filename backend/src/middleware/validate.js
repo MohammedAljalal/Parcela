@@ -1,6 +1,7 @@
 // Validates req.body (default) or req.query against a Joi schema.
+'use strict';
 
-import { sendError } from '../utils/response.js';
+const { sendError } = require('../utils/response');
 
 const validate = (schema, target = 'body') => {
   if (!schema || typeof schema.validate !== 'function') {
@@ -30,4 +31,4 @@ const validate = (schema, target = 'body') => {
   };
 };
 
-export default validate;
+module.exports = validate;

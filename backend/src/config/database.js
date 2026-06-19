@@ -1,7 +1,8 @@
 // MongoDB connection setup.
+'use strict';
 
-import mongoose from 'mongoose';
-import env from './env.js';
+const mongoose = require('mongoose');
+const env = require('./env');
 
 const connectDB = async () => {
   try {
@@ -21,4 +22,4 @@ mongoose.connection.on('reconnected', () => {
   console.log('MongoDB reconnected');
 });
 
-export default connectDB;
+module.exports = connectDB;

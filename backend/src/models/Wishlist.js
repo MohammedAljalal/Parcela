@@ -1,6 +1,7 @@
 // Per-user wishlist. One wishlist per user.
+'use strict';
 
-import { Schema, model } from 'mongoose';
+const { Schema, model } = require('mongoose');
 
 const wishlistItemSchema = new Schema(
   {
@@ -20,4 +21,4 @@ const wishlistSchema = new Schema(
 
 wishlistSchema.index({ user: 1, 'products.product': 1 });
 
-export default model('Wishlist', wishlistSchema);
+module.exports = model('Wishlist', wishlistSchema);

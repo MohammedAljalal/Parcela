@@ -1,8 +1,9 @@
 // JWT-based route protection and role-based access control.
+'use strict';
 
-import { verifyToken } from '../config/jwt.js';
-import { User } from '../models/index.js';
-import { sendError } from '../utils/response.js';
+const { verifyToken } = require('../config/jwt');
+const { User } = require('../models');
+const { sendError } = require('../utils/response');
 
 const protect = async (req, res, next) => {
   try {
@@ -42,4 +43,4 @@ const restrictTo = (...roles) => {
   };
 };
 
-export { protect, restrictTo };
+module.exports = { protect, restrictTo };

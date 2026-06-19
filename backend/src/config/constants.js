@@ -1,4 +1,5 @@
 // Central enums used across models and controllers.
+'use strict';
 
 const ROLES = {
   CUSTOMER: 'customer',
@@ -67,7 +68,7 @@ const NOTIFICATION_TYPE = {
   SYSTEM: 'system',
 };
 
-export {
+module.exports = {
   ROLES,
   LANGUAGES,
   OTP,
