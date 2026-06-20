@@ -1,33 +1,33 @@
 // Application entry point: Express app, middleware, routes, error handling.
 
-import http from 'http';
-import express from 'express';
-import helmet from 'helmet';
-import cors from 'cors';
-import morgan from 'morgan';
+const http = require('http');
+const express = require('express');
+const helmet = require('helmet');
+const cors = require('cors');
+const morgan = require('morgan');
 
-import connectDB from './src/config/database.js';
+const connectDB = require('./src/config/database.js');
 
 // Loads all models once, in the correct dependency order.
-import './src/models/index.js';
+require('./src/models/index.js');
 
-import env from './src/config/env.js';
-import { notFound, errorHandler } from './src/middleware/errorHandler.js';
-import { sendSuccess } from './src/utils/response.js';
+const env = require('./src/config/env.js');
+const { notFound, errorHandler } = require('./src/middleware/errorHandler.js');
+const { sendSuccess } = require('./src/utils/response.js');
 
-import authRoutes from './src/routes/auth.routes.js';
-import addressRoutes from './src/routes/address.routes.js';
-import islandRoutes from './src/routes/island.routes.js';
-import categoryRoutes from './src/routes/category.routes.js';
-import productRoutes from './src/routes/product.routes.js';
-import cartRoutes from './src/routes/cart.routes.js';
-import orderRoutes from './src/routes/order.routes.js';
-import notificationRoutes from './src/routes/notification.routes.js';
-import reviewRoutes from './src/routes/review.routes.js';
-import wishlistRoutes from './src/routes/wishlist.routes.js';
-import bannerRoutes from './src/routes/banner.routes.js';
-import couponRoutes from './src/routes/coupon.routes.js';
-import paymentRoutes from './src/routes/payment.routes.js';
+const authRoutes = require('./src/routes/auth.routes.js');
+const addressRoutes = require('./src/routes/address.routes.js');
+const islandRoutes = require('./src/routes/island.routes.js');
+const categoryRoutes = require('./src/routes/category.routes.js');
+const productRoutes = require('./src/routes/product.routes.js');
+const cartRoutes = require('./src/routes/cart.routes.js');
+const orderRoutes = require('./src/routes/order.routes.js');
+const notificationRoutes = require('./src/routes/notification.routes.js');
+const reviewRoutes = require('./src/routes/review.routes.js');
+const wishlistRoutes = require('./src/routes/wishlist.routes.js');
+const bannerRoutes = require('./src/routes/banner.routes.js');
+const couponRoutes = require('./src/routes/coupon.routes.js');
+const paymentRoutes = require('./src/routes/payment.routes.js');
 
 const app = express();
 
@@ -36,12 +36,13 @@ connectDB();
 // Security headers.
 app.use(helmet());
 
-// Restrict cross-origin access to the configured client.
+// Allow all origins in development (mobile apps don't have a predictable origin).
+// In production, restrict to CLIENT_URL.
 app.use(
   cors({
-    origin: env.CLIENT_URL,
+    origin: env.NODE_ENV === 'production' ? env.CLIENT_URL : '*',
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-    credentials: true,
+    credentials: env.NODE_ENV === 'production',
   })
 );
 
@@ -55,6 +56,10 @@ if (env.NODE_ENV === 'development') {
 // Health check.
 app.get('/health', (req, res) => {
   sendSuccess(res, { environment: env.NODE_ENV, timestamp: new Date().toISOString() }, 'Server is healthy');
+});
+
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok' });
 });
 
 // API routes.
@@ -78,7 +83,7 @@ app.use(errorHandler);
 
 const server = http.createServer(app);
 
-server.listen(env.PORT, () => {
+server.listen(env.PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${env.PORT}`);
   console.log(`Environment: ${env.NODE_ENV}`);
   console.log(`Health check: http://localhost:${env.PORT}/health`);
@@ -94,4 +99,4 @@ process.on('uncaughtException', (error) => {
   server.close(() => process.exit(1));
 });
 
-export default app;
+module.exports = app;

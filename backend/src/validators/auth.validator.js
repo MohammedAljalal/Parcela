@@ -1,5 +1,7 @@
-// Validation rules for phone+OTP and Google authentication.
-import Joi from 'joi';
+// Validation rules for phone+OTP, Google, and email/password authentication.
+'use strict';
+
+const Joi = require('joi');
 
 const phoneSchema = Joi.string()
   .pattern(/^\+238\d{7}$/)
@@ -24,7 +26,6 @@ const verifyOtpSchema = Joi.object({
       'string.pattern.base': 'Code must contain digits only',
       'any.required': 'Code is required',
     }),
-  // Only required for new users, enforced in the controller.
   name: Joi.string().min(2).max(50).optional(),
 });
 
@@ -32,5 +33,50 @@ const googleAuthSchema = Joi.object({
   idToken: Joi.string().required().messages({ 'any.required': 'Google token is required' }),
 });
 
-export { sendOtpSchema, verifyOtpSchema, googleAuthSchema };
+const registerEmailSchema = Joi.object({
+  name: Joi.string().min(2).max(50).required().messages({
+    'any.required': 'Name is required',
+    'string.min': 'Name must be at least 2 characters',
+  }),
+  email: Joi.string().email().required().messages({
+    'any.required': 'Email is required',
+    'string.email': 'Must be a valid email address',
+  }),
+  password: Joi.string().min(6).required().messages({
+    'any.required': 'Password is required',
+    'string.min': 'Password must be at least 6 characters',
+  }),
+});
 
+const loginEmailSchema = Joi.object({
+  email: Joi.string().email().required().messages({
+    'any.required': 'Email is required',
+    'string.email': 'Must be a valid email address',
+  }),
+  password: Joi.string().required().messages({
+    'any.required': 'Password is required',
+  }),
+});
+
+const updateProfileSchema = Joi.object({
+  name: Joi.string().min(2).max(50).optional(),
+  preferredLanguage: Joi.string().valid('pt', 'en').optional(),
+  notificationsEnabled: Joi.boolean().optional(),
+  avatar: Joi.string().uri().optional().allow(''),
+});
+
+const refreshTokenSchema = Joi.object({
+  refreshToken: Joi.string().required().messages({
+    'any.required': 'Refresh token is required',
+  }),
+});
+
+module.exports = {
+  sendOtpSchema,
+  verifyOtpSchema,
+  googleAuthSchema,
+  registerEmailSchema,
+  loginEmailSchema,
+  updateProfileSchema,
+  refreshTokenSchema,
+};

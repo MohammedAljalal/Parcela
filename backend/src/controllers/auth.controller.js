@@ -1,4 +1,4 @@
-// Authentication: phone+OTP login, Google OAuth, profile read/update, logout, token refresh.
+// Authentication: phone+OTP login, email+password login/register, Google OAuth, profile, logout, token refresh.
 'use strict';
 
 const crypto = require('crypto');
@@ -13,8 +13,8 @@ const env = require('../config/env');
 
 const googleClient = new OAuth2Client(env.GOOGLE_CLIENT_ID);
 
-// Generates a new access+refresh token pair and sets the refresh token hash on the user.
-// Returns { accessToken, rawRefreshToken } — caller must save the user after this.
+// Helpers
+
 const issueTokenPair = (user) => {
   const accessToken = generateToken({ id: user._id, role: user.role });
   const rawRefreshToken = crypto.randomBytes(40).toString('hex');
@@ -23,11 +23,7 @@ const issueTokenPair = (user) => {
   return { accessToken, rawRefreshToken };
 };
 
-const createSendToken = (res, user, statusCode, message) => {
-  const { accessToken, rawRefreshToken } = issueTokenPair(user);
-  // refreshToken is returned once here; client should store it securely (e.g. httpOnly cookie or secure storage).
-  return sendSuccess(res, { token: accessToken, refreshToken: rawRefreshToken, user }, message, statusCode);
-};
+// OTP
 
 // POST /api/auth/otp/send
 const sendOtp = async (req, res, next) => {
@@ -37,13 +33,8 @@ const sendOtp = async (req, res, next) => {
     let otpLog = await OtpLog.findOne({ identifier: phone });
     if (!otpLog) otpLog = await OtpLog.create({ identifier: phone });
 
-    if (otpLog.isBlocked()) {
-      return sendError(res, 'This number is temporarily blocked, try again later', 429);
-    }
-
-    if (otpLog.mustWait()) {
-      return sendError(res, `Please wait ${OTP.RESEND_WAIT_SEC} seconds before requesting a new code`, 429);
-    }
+    if (otpLog.isBlocked()) return sendError(res, 'This number is temporarily blocked, try again later', 429);
+    if (otpLog.mustWait()) return sendError(res, `Please wait ${OTP.RESEND_WAIT_SEC} seconds before requesting a new code`, 429);
 
     const code = generateOtp();
     const expiresAt = new Date(Date.now() + OTP.EXPIRES_IN_MIN * 60 * 1000);
@@ -53,17 +44,14 @@ const sendOtp = async (req, res, next) => {
 
     user.otp = { code, expiresAt, attempts: 0 };
     await user.save();
-
     await sendOtpSms(phone, code);
 
     otpLog.attempts += 1;
     otpLog.lastSentAt = new Date();
     otpLog.requestIp = req.ip;
-
     if (otpLog.attempts >= OTP.MAX_SEND_PER_WINDOW) {
       otpLog.blockedUntil = new Date(Date.now() + OTP.BLOCK_DURATION_MIN * 60 * 1000);
     }
-
     await otpLog.save();
 
     return sendSuccess(res, { expiresIn: OTP.EXPIRES_IN_MIN * 60 }, 'Code sent successfully');
@@ -76,19 +64,12 @@ const sendOtp = async (req, res, next) => {
 const verifyOtp = async (req, res, next) => {
   try {
     const { phone, code, name } = req.body;
-
     const user = await User.findOne({ phone }).select('+otp.code +otp.expiresAt +otp.attempts');
 
-    if (!user) {
-      return sendError(res, 'No verification request found for this number', 404);
-    }
-
-    if (user.otp.attempts >= OTP.MAX_ATTEMPTS) {
-      return sendError(res, 'Too many attempts, request a new code', 429);
-    }
+    if (!user) return sendError(res, 'No verification request found for this number', 404);
+    if (user.otp.attempts >= OTP.MAX_ATTEMPTS) return sendError(res, 'Too many attempts, request a new code', 429);
 
     const isValid = user.isOtpValid(code);
-
     if (!isValid) {
       user.otp.attempts += 1;
       await user.save();
@@ -96,13 +77,8 @@ const verifyOtp = async (req, res, next) => {
     }
 
     const isNewUser = !user.name;
-
     if (isNewUser) {
-      if (!name) {
-        return sendError(res, 'Name is required to complete account creation', 422, [
-          'Send name with the verify request for a new user',
-        ]);
-      }
+      if (!name) return sendError(res, 'Name is required to complete account creation', 422, ['Send name with verify request']);
       user.name = name;
     }
 
@@ -110,7 +86,6 @@ const verifyOtp = async (req, res, next) => {
     user.isVerified = true;
     user.lastLoginAt = new Date();
 
-    // issueTokenPair sets user.refreshToken hash; save before sending response.
     const { accessToken, rawRefreshToken } = issueTokenPair(user);
     await user.save();
 
@@ -124,36 +99,52 @@ const verifyOtp = async (req, res, next) => {
   }
 };
 
-// POST /api/auth/google
-const googleAuth = async (req, res, next) => {
+// Email / Password Auth
+
+// POST /api/auth/register
+const registerWithEmail = async (req, res, next) => {
   try {
-    const { idToken } = req.body;
+    const { name, email, password } = req.body;
 
-    const ticket = await googleClient.verifyIdToken({ idToken, audience: env.GOOGLE_CLIENT_ID });
-    const payload = ticket.getPayload();
-    const { sub: googleId, email, name, picture } = payload;
+    const existing = await User.findOne({ email });
+    if (existing) return sendError(res, 'An account with this email already exists', 400);
 
-    let user = await User.findOne({ googleId });
+    const user = await User.create({
+      name,
+      email,
+      password,
+      isVerified: true,
+      emailVerified: true,
+      lastLoginAt: new Date(),
+    });
 
-    if (!user) {
-      user = await User.findOne({ email });
+    const { accessToken, rawRefreshToken } = issueTokenPair(user);
+    await user.save();
 
-      if (user) {
-        user.googleId = googleId;
-      } else {
-        user = await User.create({
-          googleId,
-          email,
-          name,
-          avatar: picture || '',
-          isVerified: true,
-          emailVerified: true,
-        });
-      }
-    }
+    return sendSuccess(
+      res,
+      { token: accessToken, refreshToken: rawRefreshToken, user },
+      'Account created and logged in',
+      201
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
+// POST /api/auth/login
+const loginWithEmail = async (req, res, next) => {
+  try {
+    const { email, password } = req.body;
+
+    const user = await User.findOne({ email }).select('+password');
+    if (!user) return sendError(res, 'Invalid email or password', 401);
+    if (!user.isActive) return sendError(res, 'Your account has been deactivated', 403);
+
+    const isValid = await user.comparePassword(password);
+    if (!isValid) return sendError(res, 'Invalid email or password', 401);
 
     user.lastLoginAt = new Date();
-    // issueTokenPair sets user.refreshToken hash; save before sending response.
     const { accessToken, rawRefreshToken } = issueTokenPair(user);
     await user.save();
 
@@ -163,12 +154,44 @@ const googleAuth = async (req, res, next) => {
       'Logged in successfully'
     );
   } catch (error) {
+    next(error);
+  }
+};
+
+// Google OAuth
+
+// POST /api/auth/google
+const googleAuth = async (req, res, next) => {
+  try {
+    const { idToken } = req.body;
+    const ticket = await googleClient.verifyIdToken({ idToken, audience: env.GOOGLE_CLIENT_ID });
+    const payload = ticket.getPayload();
+    const { sub: googleId, email, name, picture } = payload;
+
+    let user = await User.findOne({ googleId });
+    if (!user) {
+      user = await User.findOne({ email });
+      if (user) {
+        user.googleId = googleId;
+      } else {
+        user = await User.create({ googleId, email, name, avatar: picture || '', isVerified: true, emailVerified: true });
+      }
+    }
+
+    user.lastLoginAt = new Date();
+    const { accessToken, rawRefreshToken } = issueTokenPair(user);
+    await user.save();
+
+    return sendSuccess(res, { token: accessToken, refreshToken: rawRefreshToken, user }, 'Logged in successfully');
+  } catch (error) {
     if (error.message?.includes('Token used too late') || error.message?.includes('Invalid token')) {
       return sendError(res, 'Google token is invalid or expired', 401);
     }
     next(error);
   }
 };
+
+// Profile
 
 // GET /api/auth/me
 const getMe = async (req, res, next) => {
@@ -182,60 +205,42 @@ const getMe = async (req, res, next) => {
 };
 
 // PATCH /api/auth/me
-// Updates the editable profile fields visible in Image 9: name, language,
-// notificationsEnabled, avatar. Phone is changed via a separate OTP flow
-// (not implemented here), and role is never user-editable.
 const updateProfile = async (req, res, next) => {
   try {
     const { name, preferredLanguage, notificationsEnabled, avatar } = req.body;
-
     const user = await User.findById(req.user._id);
     if (!user) return sendError(res, 'User not found', 404);
 
-    // Only update fields that were actually sent.
     if (name !== undefined) user.name = name;
     if (preferredLanguage !== undefined) user.preferredLanguage = preferredLanguage;
     if (notificationsEnabled !== undefined) user.notificationsEnabled = notificationsEnabled;
     if (avatar !== undefined) user.avatar = avatar;
 
     await user.save();
-
     return sendSuccess(res, { user }, 'Profile updated successfully');
   } catch (error) {
     next(error);
   }
 };
 
+// Token & Logout
+
 // POST /api/auth/refresh
-// Rotates a refresh token: verifies the stored hash, issues new access + refresh tokens.
-// The refreshToken field already exists on the User schema but was previously unused.
 const refreshAccessToken = async (req, res, next) => {
   try {
     const { refreshToken } = req.body;
-
-    // Hash the incoming token before comparing with the stored hash.
     const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
-
     const user = await User.findOne({ refreshToken: tokenHash }).select('+refreshToken');
 
-    if (!user || !user.isActive) {
-      return sendError(res, 'Invalid or expired refresh token', 401);
-    }
+    if (!user || !user.isActive) return sendError(res, 'Invalid or expired refresh token', 401);
 
-    // Rotate: generate a new refresh token and store its hash.
     const newRawRefreshToken = crypto.randomBytes(40).toString('hex');
     const newTokenHash = crypto.createHash('sha256').update(newRawRefreshToken).digest('hex');
-
     user.refreshToken = newTokenHash;
     await user.save();
 
     const accessToken = generateToken({ id: user._id, role: user.role });
-
-    return sendSuccess(
-      res,
-      { token: accessToken, refreshToken: newRawRefreshToken },
-      'Token refreshed successfully'
-    );
+    return sendSuccess(res, { token: accessToken, refreshToken: newRawRefreshToken }, 'Token refreshed successfully');
   } catch (error) {
     next(error);
   }
@@ -244,7 +249,6 @@ const refreshAccessToken = async (req, res, next) => {
 // POST /api/auth/logout
 const logout = async (req, res, next) => {
   try {
-    // Invalidate refresh token on logout so it cannot be reused.
     req.user.fcmToken = null;
     req.user.refreshToken = null;
     await req.user.save();
@@ -254,4 +258,14 @@ const logout = async (req, res, next) => {
   }
 };
 
-module.exports = { sendOtp, verifyOtp, googleAuth, getMe, updateProfile, refreshAccessToken, logout };
+module.exports = {
+  sendOtp,
+  verifyOtp,
+  googleAuth,
+  getMe,
+  updateProfile,
+  refreshAccessToken,
+  logout,
+  registerWithEmail,
+  loginWithEmail,
+};
