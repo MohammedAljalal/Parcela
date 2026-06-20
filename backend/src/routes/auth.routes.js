@@ -1,4 +1,4 @@
-// Auth routes: OTP login, Google login, profile read/update, token refresh, logout.
+// Auth routes: email/password login+register, OTP login, Google login, profile, token refresh, logout.
 'use strict';
 
 const express = require('express');
@@ -12,31 +12,39 @@ const {
   updateProfile,
   refreshAccessToken,
   logout,
-} = require('../controllers/auth.controller');
-const { protect } = require('../middleware/auth.middleware');
-const validate = require('../middleware/validate');
-const otpRateLimiter = require('../middleware/otpRateLimiter');
+  registerWithEmail,
+  loginWithEmail,
+} = require('../controllers/auth.controller.js');
+const { protect } = require('../middleware/auth.middleware.js');
+const validate = require('../middleware/validate.js');
+const otpRateLimiter = require('../middleware/otpRateLimiter.js');
 const {
   sendOtpSchema,
   verifyOtpSchema,
   googleAuthSchema,
   updateProfileSchema,
   refreshTokenSchema,
-} = require('../validators/auth.validator');
+  registerEmailSchema,
+  loginEmailSchema,
+} = require('../validators/auth.validator.js');
 
-router.post('/otp/send', otpRateLimiter, validate(sendOtpSchema), sendOtp);
+// ── Email / Password Auth ────────────────────────────────────────────────────
+router.post('/register', validate(registerEmailSchema), registerWithEmail);
+router.post('/login',    validate(loginEmailSchema),    loginWithEmail);
+
+// ── OTP Auth ─────────────────────────────────────────────────────────────────
+router.post('/otp/send',   otpRateLimiter, validate(sendOtpSchema),    sendOtp);
 router.post('/otp/verify', validate(verifyOtpSchema), verifyOtp);
+
+// ── Google Auth ───────────────────────────────────────────────────────────────
 router.post('/google', validate(googleAuthSchema), googleAuth);
 
-// Refresh token rotation — public (the token itself is the credential).
+// ── Token Rotation ────────────────────────────────────────────────────────────
 router.post('/refresh', validate(refreshTokenSchema), refreshAccessToken);
 
-router.get('/me', protect, getMe);
-
-// PATCH /api/auth/me — updates name, language, notificationsEnabled, avatar.
-// Matches the editable fields visible in the Profile screen (Image 9).
-router.patch('/me', protect, validate(updateProfileSchema), updateProfile);
-
+// ── Protected Profile Routes ──────────────────────────────────────────────────
+router.get('/me',      protect, getMe);
+router.patch('/me',    protect, validate(updateProfileSchema), updateProfile);
 router.post('/logout', protect, logout);
 
 module.exports = router;
