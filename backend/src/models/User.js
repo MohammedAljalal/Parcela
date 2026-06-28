@@ -39,6 +39,13 @@ const userSchema = new Schema(
       select: false,
     },
 
+    previousRefreshTokens: {
+      // Stores previously used refresh token hashes for reuse detection.
+      type: [String],
+      default: [],
+      select: false,
+    },
+
     preferredIsland: { type: Schema.Types.ObjectId, ref: 'Island' },
     preferredLanguage: { type: String, enum: Object.values(LANGUAGES), default: LANGUAGES.PT },
     notificationsEnabled: { type: Boolean, default: true },
@@ -56,6 +63,7 @@ const userSchema = new Schema(
         delete ret.password;
         delete ret.otp;
         delete ret.refreshToken;
+        delete ret.previousRefreshTokens;
         delete ret.__v;
         return ret;
       },

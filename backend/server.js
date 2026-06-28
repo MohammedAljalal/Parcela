@@ -28,6 +28,7 @@ const wishlistRoutes = require('./src/routes/wishlist.routes.js');
 const bannerRoutes = require('./src/routes/banner.routes.js');
 const couponRoutes = require('./src/routes/coupon.routes.js');
 const paymentRoutes = require('./src/routes/payment.routes.js');
+const stripeRoutes = require('./src/routes/stripe.routes.js');
 
 const app = express();
 
@@ -45,6 +46,9 @@ app.use(
     credentials: env.NODE_ENV === 'production',
   })
 );
+
+// Stripe webhook needs raw body, mount before json parser
+app.use('/api/stripe', stripeRoutes);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

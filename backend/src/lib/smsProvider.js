@@ -11,10 +11,22 @@ const sendOtpSms = async (phone, code) => {
   }
 
   // Production: integrate a real SMS provider here.
-  // const twilioClient = require('twilio')(env.TWILIO_SID, env.TWILIO_AUTH_TOKEN);
-  // await twilioClient.messages.create({ body: `Code: ${code}`, from: ..., to: phone });
+  if (env.TWILIO_SID && env.TWILIO_AUTH_TOKEN && env.TWILIO_PHONE_NUMBER) {
+    try {
+      const twilioClient = require('twilio')(env.TWILIO_SID, env.TWILIO_AUTH_TOKEN);
+      await twilioClient.messages.create({
+        body: `Seu código de verificação Parcela é: ${code}`,
+        from: env.TWILIO_PHONE_NUMBER,
+        to: phone
+      });
+      return { success: true, simulated: false };
+    } catch (err) {
+      console.error('[SMS ERROR] Twilio failed:', err.message);
+      throw new Error('Falha ao enviar SMS. Tente novamente.');
+    }
+  }
 
-  throw new Error('SMS provider is not configured for production');
+  throw new Error('SMS provider is not configured for production. Please add TWILIO_SID, TWILIO_AUTH_TOKEN, and TWILIO_PHONE_NUMBER.');
 };
 
 module.exports = { sendOtpSms };

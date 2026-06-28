@@ -65,6 +65,17 @@ const createOrderFromCart = async ({
 
     const orderNumber = await generateUniqueOrderNumber();
 
+    // For cash-on-delivery, no payment gateway is needed — move straight to processing.
+    const isCashOnDelivery = paymentMethod === 'cash_on_delivery';
+    const initialStatus = isCashOnDelivery ? ORDER_STATUS.PROCESSING : ORDER_STATUS.PENDING;
+    const initialPaymentStatus = isCashOnDelivery ? PAYMENT_STATUS.PENDING : PAYMENT_STATUS.PENDING;
+    const statusHistory = isCashOnDelivery
+      ? [
+          { status: ORDER_STATUS.PENDING, note: 'Order created' },
+          { status: ORDER_STATUS.PROCESSING, note: 'Cash on delivery — confirmed automatically' },
+        ]
+      : [{ status: ORDER_STATUS.PENDING, note: 'Order created' }];
+
     const order = await Order.create(
       [
         {
@@ -85,9 +96,9 @@ const createOrderFromCart = async ({
           coupon: coupon?._id || null,
           couponCode,
           paymentMethod,
-          paymentStatus: PAYMENT_STATUS.PENDING,
-          status: ORDER_STATUS.PENDING,
-          statusHistory: [{ status: ORDER_STATUS.PENDING, note: 'Order created' }],
+          paymentStatus: initialPaymentStatus,
+          status: initialStatus,
+          statusHistory,
         },
       ],
       { session }

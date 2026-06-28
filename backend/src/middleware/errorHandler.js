@@ -25,9 +25,10 @@ const errorHandler = (err, req, res, next) => {
   // Duplicate unique field.
   if (err.code === 11000) {
     statusCode = 409;
-    message = 'Duplicate value';
     const field = Object.keys(err.keyValue)[0];
-    errors = [`Field "${field}" already exists`];
+    const friendlyField = field === 'email' ? 'endereço de email' : field === 'phone' ? 'número de telefone' : field;
+    message = `Este ${friendlyField} já está registado.`;
+    errors = [message];
   }
 
   // Invalid ObjectId.

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,26 +12,30 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useDispatch, useSelector } from 'react-redux';
+import * as WebBrowser from 'expo-web-browser';
+import * as Google from 'expo-auth-session/providers/google';
+import CountryPickerModal from '../components/CountryPickerModal';
 
-import { registerUser } from '../store/slices/authSlice';
+import { registerUser, loginWithGoogle, clearError, sendOtp } from '../store/slices/authSlice';
+import toast from '../utils/toast';
 import TabSwitch from '../components/TabSwitch';
 import Input from '../components/Input';
 import Button from '../components/Button';
 import colors from '../theme/colors';
 import spacing from '../theme/spacing';
 
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+WebBrowser.maybeCompleteAuthSession();
+
 const TABS = [
   { key: 'phone', label: 'Telefone' },
   { key: 'email', label: 'Email' },
 ];
 
-const COUNTRY_CODES = [
-  { code: '+238', flag: '🇨🇻', iso: 'CV' },
-  { code: '+351', flag: '🇵🇹', iso: 'PT' },
-  { code: '+44',  flag: '🇬🇧', iso: 'GB' },
-  { code: '+1',   flag: '🇺🇸', iso: 'US' },
-];
+// Custom COUNTRY_CODES removed, replaced by react-native-country-picker-modal
 
+// ─── Logo ─────────────────────────────────────────────────────────────────────
 const AppLogo = () => (
   <View style={styles.logoBox}>
     <View style={styles.boxIcon}>
@@ -43,59 +47,70 @@ const AppLogo = () => (
   </View>
 );
 
-const CountryPicker = ({ selected, onSelect }) => {
-  const [open, setOpen] = useState(false);
-  const country = COUNTRY_CODES.find((c) => c.code === selected) || COUNTRY_CODES[0];
+// Custom CountryPicker removed
 
-  return (
-    <View>
-      <TouchableOpacity
-        style={styles.countryTrigger}
-        onPress={() => setOpen((v) => !v)}
-        activeOpacity={0.7}
-      >
-        <Text style={styles.countryFlag}>{country.flag}</Text>
-        <Text style={styles.countryCode}>{country.code}</Text>
-        <Text style={styles.countryChevron}>▾</Text>
-      </TouchableOpacity>
-
-      {open && (
-        <View style={styles.countryDropdown}>
-          {COUNTRY_CODES.map((c) => (
-            <TouchableOpacity
-              key={c.iso}
-              style={styles.countryOption}
-              onPress={() => {
-                onSelect(c.code);
-                setOpen(false);
-              }}
-            >
-              <Text style={styles.countryFlag}>{c.flag}</Text>
-              <Text style={styles.countryCode}>{c.code}</Text>
-              <Text style={styles.countryIso}>{c.iso}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
-    </View>
-  );
-};
-
+// ─── Google Icon ──────────────────────────────────────────────────────────────
 const GoogleIcon = () => (
   <Text style={styles.googleLetter}>G</Text>
 );
 
+// ─── Main Screen ──────────────────────────────────────────────────────────────
 const RegisterScreen = () => {
   const router = useRouter();
   const dispatch = useDispatch();
-  
+
   const { loading, error } = useSelector((state) => state.auth);
+
+  // Google Auth Session (same client IDs as LoginScreen)
+  const [request, response, promptAsync] = Google.useAuthRequest({
+    expoClientId: '623297773074-6n0m3e5qhrfgsegcq90ejr2s9r686621.apps.googleusercontent.com',
+    androidClientId: '623297773074-6n0m3e5qhrfgsegcq90ejr2s9r686621.apps.googleusercontent.com',
+    iosClientId: '623297773074-6n0m3e5qhrfgsegcq90ejr2s9r686621.apps.googleusercontent.com',
+    webClientId: '623297773074-6n0m3e5qhrfgsegcq90ejr2s9r686621.apps.googleusercontent.com',
+  });
+
+  // Handle Google auth response
+  useEffect(() => {
+    if (!response) return;
+
+    if (response.type === 'success') {
+      const { authentication } = response;
+      const token = authentication?.idToken ?? authentication?.accessToken;
+      if (token) {
+        console.log('[Google/Register] Auth success — dispatching loginWithGoogle');
+        dispatch(loginWithGoogle(token))
+          .unwrap()
+          .then(() => toast.success('Conta criada!', 'Bem-vindo'))
+          .catch((err) => {
+            toast.error(typeof err === 'string' ? err : 'Falha ao autenticar', 'Erro Google');
+          });
+      } else {
+        console.error('[Google/Register] No token in response:', authentication);
+      }
+    } else if (response.type === 'error') {
+      console.error('[Google/Register] Auth error:', response.error);
+    }
+  }, [response, dispatch]);
+
+  // Clear error on mount and unmount
+  useEffect(() => {
+    dispatch(clearError());
+    return () => {
+      dispatch(clearError());
+    };
+  }, [dispatch]);
 
   const [activeTab, setActiveTab] = useState('phone');
 
+  const handleTabChange = (tab) => {
+    dispatch(clearError());
+    setActiveTab(tab);
+  };
+
   // Form states
   const [name, setName] = useState('');
-  const [countryCode, setCountryCode] = useState('+238');
+  const [countryIso, setCountryIso] = useState('CV');
+  const [callingCode, setCallingCode] = useState('+238');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -104,22 +119,33 @@ const RegisterScreen = () => {
   const isEmailValid = name.trim().length > 2 && email.trim().length > 3 && password.trim().length >= 6;
   const canContinue = activeTab === 'phone' ? isPhoneValid : isEmailValid;
 
-  const handleRegister = async () => {
-    let credentials = {};
+  const handleRegister = () => {
     if (activeTab === 'phone') {
-      credentials = { type: 'phone', name, phone: `${countryCode}${phone}` };
+      const fullPhone = `${callingCode}${phone.trim()}`;
+      dispatch(sendOtp(fullPhone))
+        .unwrap()
+        .then(() => {
+          toast.info(`Código enviado para ${fullPhone}`);
+          router.push({ pathname: '/otp-verify', params: { phone: fullPhone, prefilledName: name } });
+        })
+        .catch((err) => {
+          toast.error(typeof err === 'string' ? err : 'Falha ao enviar código', 'Erro');
+        });
     } else {
-      credentials = { type: 'email', name, email, password };
-    }
-
-    const result = await dispatch(registerUser(credentials));
-    if (result.success) {
-      router.push('/home');
+      const credentials = { type: 'email', name, email, password };
+      dispatch(registerUser(credentials))
+        .unwrap()
+        .then(() => toast.success('Conta criada com sucesso!', 'Bem-vindo'))
+        .catch((err) => {
+          toast.error(typeof err === 'string' ? err : 'Falha ao criar conta', 'Erro');
+        });
     }
   };
 
   const handleGoogle = () => {
-    console.log('Google sign-in pressed');
+    dispatch(clearError());
+    console.log('[Google/Register] Initiating auth flow...');
+    promptAsync();
   };
 
   return (
@@ -147,7 +173,7 @@ const RegisterScreen = () => {
             <TabSwitch
               tabs={TABS}
               active={activeTab}
-              onChange={setActiveTab}
+              onChange={handleTabChange}
             />
 
             {error ? (
@@ -175,10 +201,17 @@ const RegisterScreen = () => {
                   placeholder="000 00 00"
                   keyboardType="phone-pad"
                   leftSlot={
-                    <CountryPicker
-                      selected={countryCode}
-                      onSelect={setCountryCode}
-                    />
+                    <View style={{ paddingVertical: 4 }}>
+                      <CountryPickerModal
+                        countryIso={countryIso}
+                        callingCode={callingCode}
+                        onSelect={(c) => {
+                          setCountryIso(c.iso);
+                          setCallingCode(c.code);
+                        }}
+                        disabled={loading}
+                      />
+                    </View>
                   }
                   editable={!loading}
                 />
@@ -225,10 +258,10 @@ const RegisterScreen = () => {
 
             {/* ── Google button ── */}
             <TouchableOpacity
-              style={[styles.googleButton, loading && styles.disabledGoogleBtn]}
+              style={[styles.googleButton, (loading || !request) && styles.disabledGoogleBtn]}
               onPress={handleGoogle}
               activeOpacity={0.8}
-              disabled={loading}
+              disabled={loading || !request}
             >
               <GoogleIcon />
               <Text style={styles.googleLabel}>Continuar com Google</Text>
@@ -261,13 +294,7 @@ const styles = StyleSheet.create({
   appName: { fontSize: 22, fontWeight: '700', color: colors.textPrimary, letterSpacing: 0.3, marginBottom: spacing.xs },
   tagline: { fontSize: 13, color: colors.textSecondary, letterSpacing: 0.1 },
   card: { backgroundColor: colors.surface, borderRadius: spacing.radiusXl, padding: spacing.xxl, shadowColor: colors.shadowNeutral, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 16, elevation: 4, marginBottom: spacing.xl },
-  countryTrigger: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 2 },
-  countryFlag: { fontSize: 20 },
-  countryCode: { fontSize: 14, fontWeight: '600', color: colors.textPrimary },
-  countryChevron: { fontSize: 10, color: colors.textMuted, marginTop: 1 },
-  countryDropdown: { position: 'absolute', top: '100%', left: 0, zIndex: 999, backgroundColor: colors.surface, borderRadius: spacing.radiusMd, borderWidth: 1, borderColor: colors.border, shadowColor: colors.shadowNeutral, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.12, shadowRadius: 8, elevation: 8, minWidth: 130, overflow: 'hidden' },
-  countryOption: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 10, paddingHorizontal: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.divider },
-  countryIso: { fontSize: 12, color: colors.textMuted, marginLeft: 'auto' },
+  // Custom country picker styles removed
   errorContainer: { backgroundColor: '#FEE2E2', padding: spacing.md, borderRadius: spacing.radiusMd, marginBottom: spacing.lg },
   globalError: { color: '#EF4444', fontSize: 13, textAlign: 'center', fontWeight: '500' },
   dividerRow: { flexDirection: 'row', alignItems: 'center', marginVertical: spacing.xl, gap: spacing.md },

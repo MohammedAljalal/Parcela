@@ -20,6 +20,11 @@ const categorySchema = new Schema(
       pt: { type: String, default: '' },
       en: { type: String, default: '' },
     },
+    description: {
+      pt: { type: String, default: '' },
+      en: { type: String, default: '' },
+    },
+    isFeatured: { type: Boolean, default: false },
     isActive: { type: Boolean, default: true },
     sortOrder: { type: Number, default: 0 },
   },

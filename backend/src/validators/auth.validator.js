@@ -4,10 +4,10 @@
 const Joi = require('joi');
 
 const phoneSchema = Joi.string()
-  .pattern(/^\+238\d{7}$/)
+  .pattern(/^\+\d{7,15}$/)
   .required()
   .messages({
-    'string.pattern.base': 'Phone must start with +238 followed by 7 digits',
+    'string.pattern.base': 'Phone must be a valid international number starting with +',
     'any.required': 'Phone number is required',
   });
 
