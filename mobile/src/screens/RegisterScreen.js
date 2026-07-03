@@ -13,7 +13,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useDispatch, useSelector } from 'react-redux';
 import * as WebBrowser from 'expo-web-browser';
-import * as Google from 'expo-auth-session/providers/google';
+import * as Linking from 'expo-linking';
 import * as AuthSession from 'expo-auth-session';
 import CountryPickerModal from '../components/CountryPickerModal';
 
@@ -62,43 +62,27 @@ const RegisterScreen = () => {
 
   const { loading, error } = useSelector((state) => state.auth);
 
-  // Google Auth Session (same client IDs as LoginScreen)
-  const redirectUri = AuthSession.makeRedirectUri({
-    useProxy: true,
-    projectNameForProxy: '@Mohammedaljalal/mobile',
-  });
+  const handleGoogleAuth = async () => {
+    dispatch(clearError());
+    try {
+      const appRedirect = Linking.createURL('/');
+      const backendUrl = (process.env.EXPO_PUBLIC_API_URL || 'http://127.0.0.1:5000/api').replace(/\/api\/?$/, '');
+      const authUrl = `${backendUrl}/api/auth/google/start?app_redirect=${encodeURIComponent(appRedirect)}`;
 
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    clientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_EXPO || '623297773074-6n0m3e5qhrfgsegcq90ejr2s9r686621.apps.googleusercontent.com',
-    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID || '623297773074-sng1u3jfum669euff4be4cb284d13ag1.apps.googleusercontent.com',
-    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS || undefined,
-    webClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB || '623297773074-6n0m3e5qhrfgsegcq90ejr2s9r686621.apps.googleusercontent.com',
-    scopes: ['openid', 'profile', 'email'],
-    redirectUri,
-  });
+      const result = await WebBrowser.openAuthSessionAsync(authUrl, appRedirect);
 
-  // Handle Google auth response
-  useEffect(() => {
-    if (!response) return;
+      if (result.type === 'success' && result.url) {
+        const { queryParams } = Linking.parse(result.url);
+        const idToken = queryParams?.idToken;
+        if (!idToken) throw new Error('لم يتم استلام idToken من الباك اند');
 
-    if (response.type === 'success') {
-      const { authentication } = response;
-      const token = authentication?.idToken ?? authentication?.accessToken;
-      if (token) {
-        console.log('[Google/Register] Auth success — dispatching loginWithGoogle');
-        dispatch(loginWithGoogle(token))
-          .unwrap()
-          .then(() => toast.success('Conta criada!', 'Bem-vindo'))
-          .catch((err) => {
-            toast.error(typeof err === 'string' ? err : 'Falha ao autenticar', 'Erro Google');
-          });
-      } else {
-        console.error('[Google/Register] No token in response:', authentication);
+        await dispatch(loginWithGoogle(idToken)).unwrap();
+        toast.success('Conta criada!', 'Bem-vindo');
       }
-    } else if (response.type === 'error') {
-      console.error('[Google/Register] Auth error:', response.error);
+    } catch (err) {
+      toast.error(typeof err === 'string' ? err : 'Falha ao autenticar', 'Erro Google');
     }
-  }, [response, dispatch]);
+  };
 
   // Clear error on mount and unmount
   useEffect(() => {
@@ -150,11 +134,7 @@ const RegisterScreen = () => {
     }
   };
 
-  const handleGoogle = () => {
-    dispatch(clearError());
-    console.log('[Google/Register] Initiating auth flow...');
-    promptAsync({ useProxy: true });
-  };
+  const handleGoogle = handleGoogleAuth;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -266,10 +246,10 @@ const RegisterScreen = () => {
 
             {/* ── Google button ── */}
             <TouchableOpacity
-              style={[styles.googleButton, (loading || !request) && styles.disabledGoogleBtn]}
+              style={[styles.googleButton, loading && styles.disabledGoogleBtn]}
               onPress={handleGoogle}
               activeOpacity={0.8}
-              disabled={loading || !request}
+              disabled={loading}
             >
               <GoogleIcon />
               <Text style={styles.googleLabel}>Continuar com Google</Text>

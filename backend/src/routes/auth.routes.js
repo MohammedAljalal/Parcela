@@ -17,6 +17,8 @@ const {
   sendOtp,
   verifyOtp,
   googleAuth,
+  googleAuthStart,
+  googleAuthCallback,
   getMe,
   updateProfile,
   refreshAccessToken,
@@ -47,6 +49,8 @@ router.post('/otp/verify', validate(verifyOtpSchema), verifyOtp);
 
 // ── Google Auth ───────────────────────────────────────────────────────────────
 router.post('/google', validate(googleAuthSchema), googleAuth);
+router.get('/google/start', googleAuthStart);
+router.get('/google/callback', googleAuthCallback);
 
 // ── Token Rotation ────────────────────────────────────────────────────────────
 router.post('/refresh', validate(refreshTokenSchema), refreshAccessToken);

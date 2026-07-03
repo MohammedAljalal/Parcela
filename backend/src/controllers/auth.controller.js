@@ -211,6 +211,69 @@ const googleAuth = async (req, res, next) => {
   }
 };
 
+const googleAuthStart = (req, res) => {
+  const { app_redirect } = req.query;
+  if (!app_redirect) {
+    return res.status(400).send('Missing app_redirect parameter');
+  }
+  if (!env.GOOGLE_CLIENT_SECRET || !env.BACKEND_URL) {
+    return res.status(500).send('Server misconfigured: GOOGLE_CLIENT_SECRET or BACKEND_URL missing');
+  }
+
+  const redirectUri = `${env.BACKEND_URL}/api/auth/google/callback`;
+  const state = encodeURIComponent(app_redirect);
+
+  const params = new URLSearchParams({
+    client_id: env.GOOGLE_CLIENT_ID,
+    redirect_uri: redirectUri,
+    response_type: 'code',
+    scope: 'openid profile email',
+    state,
+    prompt: 'select_account',
+  });
+
+  return res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`);
+};
+
+const googleAuthCallback = async (req, res) => {
+  const { code, state, error } = req.query;
+
+  if (error) {
+    return res.status(400).send(`Google login was cancelled or denied: ${error}`);
+  }
+  if (!code || !state) {
+    return res.status(400).send('Missing code or state');
+  }
+
+  const appRedirect = decodeURIComponent(state);
+  const redirectUri = `${env.BACKEND_URL}/api/auth/google/callback`;
+
+  try {
+    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        code,
+        client_id: env.GOOGLE_CLIENT_ID,
+        client_secret: env.GOOGLE_CLIENT_SECRET,
+        redirect_uri: redirectUri,
+        grant_type: 'authorization_code',
+      }),
+    });
+
+    const tokenData = await tokenRes.json();
+    if (!tokenRes.ok || !tokenData.id_token) {
+      throw new Error(tokenData.error_description || 'Failed to exchange code with Google');
+    }
+
+    const separator = appRedirect.includes('?') ? '&' : '?';
+    return res.redirect(`${appRedirect}${separator}idToken=${encodeURIComponent(tokenData.id_token)}`);
+  } catch (err) {
+    console.error('[googleAuthCallback] error:', err.message);
+    return res.status(500).send('Failed to complete Google sign-in. Please try again.');
+  }
+};
+
 // Profile
 
 // GET /api/auth/me
@@ -303,6 +366,8 @@ module.exports = {
   sendOtp,
   verifyOtp,
   googleAuth,
+  googleAuthStart,
+  googleAuthCallback,
   getMe,
   updateProfile,
   refreshAccessToken,

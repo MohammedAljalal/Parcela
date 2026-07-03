@@ -18,7 +18,7 @@ import { useRouter } from 'expo-router';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import * as WebBrowser from 'expo-web-browser';
-import * as Google from 'expo-auth-session/providers/google';
+import * as Linking from 'expo-linking';
 import * as AuthSession from 'expo-auth-session';
 import { useEffect } from 'react';
 import CountryPickerModal from '../components/CountryPickerModal';
@@ -293,36 +293,31 @@ const LoginScreen = () => {
   const isBusy = activeTab === 'phone' ? loadingOtp : loading;
 
   // ── Google Auth ──
-  // Force auth.expo.io proxy — required for Expo Go (local IP exp:// doesn't work with Google)
-  const redirectUri = AuthSession.makeRedirectUri({
-    useProxy: true,
-    projectNameForProxy: '@Mohammedaljalal/mobile',
-  });
+  const handleGoogleAuth = useCallback(async () => {
+    dispatch(clearError());
+    setActiveAction('google');
+    try {
+      const appRedirect = Linking.createURL('/');
+      const backendUrl = (process.env.EXPO_PUBLIC_API_URL || 'http://127.0.0.1:5000/api').replace(/\/api\/?$/, '');
+      const authUrl = `${backendUrl}/api/auth/google/start?app_redirect=${encodeURIComponent(appRedirect)}`;
 
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    clientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_EXPO || '623297773074-6n0m3e5qhrfgsegcq90ejr2s9r686621.apps.googleusercontent.com',
-    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID || '623297773074-sng1u3jfum669euff4be4cb284d13ag1.apps.googleusercontent.com',
-    iosClientId:    process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS || undefined,
-    webClientId:    process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB || '623297773074-6n0m3e5qhrfgsegcq90ejr2s9r686621.apps.googleusercontent.com',
-    scopes: ['openid', 'profile', 'email'],
-    redirectUri,
-  });
+      const result = await WebBrowser.openAuthSessionAsync(authUrl, appRedirect);
 
-  useEffect(() => {
-    if (!response) return;
-    if (response.type === 'success') {
-      const token = response.authentication?.idToken ?? response.authentication?.accessToken;
-      if (token) {
-        setActiveAction('google');
-        dispatch(loginWithGoogle(token)).unwrap()
-          .then(() => toast.success('Bem-vindo!', 'Login com Google'))
-          .catch((err) => {
-            setActiveAction(null);
-            toast.error(typeof err === 'string' ? err : 'Falha ao autenticar', 'Erro Google');
-          });
+      if (result.type === 'success' && result.url) {
+        const { queryParams } = Linking.parse(result.url);
+        const idToken = queryParams?.idToken;
+        if (!idToken) throw new Error('لم يتم استلام idToken من الباك اند');
+
+        await dispatch(loginWithGoogle(idToken)).unwrap();
+        toast.success('Bem-vindo!', 'Login com Google');
+      } else {
+        setActiveAction(null);
       }
+    } catch (err) {
+      setActiveAction(null);
+      toast.error(typeof err === 'string' ? err : 'Falha ao autenticar', 'Erro Google');
     }
-  }, [response, dispatch]);
+  }, [dispatch]);
 
   // Clear global error on tab change / unmount
   useEffect(() => {
@@ -379,10 +374,7 @@ const LoginScreen = () => {
     }
   }, [activeTab, phone, callingCode, email, password, dispatch, router, t]);
 
-  const handleGoogle = useCallback(() => {
-    dispatch(clearError());
-    promptAsync({ useProxy: true });
-  }, [dispatch, promptAsync]);
+  const handleGoogle = handleGoogleAuth;
 
   // ── CTA disabled? ──
   const canSubmit = useMemo(() => {
@@ -483,7 +475,7 @@ const LoginScreen = () => {
               label={t('login.continueWithGoogle')}
               onPress={handleGoogle}
               loading={loading && activeAction === 'google'}
-              disabled={loading || !request}
+              disabled={loading}
             />
 
             {/* Sign up */}

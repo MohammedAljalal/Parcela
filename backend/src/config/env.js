@@ -19,6 +19,8 @@ module.exports = {
   CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET,
 
   GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
+  GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
+  BACKEND_URL: process.env.BACKEND_URL,
 
   // SISP / Vinti4Net — credentials issued by SISP after merchant registration at
   // comerciante.vinti4.cv. In sandbox, SISP provides test POS_ID/POS_AUT_CODE
