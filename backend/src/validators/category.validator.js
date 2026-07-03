@@ -1,5 +1,5 @@
 // Validation rules for category management.
-import Joi from 'joi';
+const Joi = require('joi');
 
 const objectId = Joi.string().pattern(/^[0-9a-fA-F]{24}$/).messages({
   'string.pattern.base': 'Invalid identifier',
@@ -40,5 +40,5 @@ const updateCategorySchema = Joi.object({
   .min(1)
   .messages({ 'object.min': 'At least one field is required' });
 
-export { createCategorySchema, updateCategorySchema };
+module.exports = { createCategorySchema, updateCategorySchema };
 

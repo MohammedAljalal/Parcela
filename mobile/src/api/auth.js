@@ -65,7 +65,9 @@ export const logoutApi = async () => {
  * @param {Object} data - Profile data to update (e.g., name, avatar, preferredLanguage)
  */
 export const updateProfileApi = async (data) => {
-  const response = await client.patch('/auth/me', data);
+  const isFormData = data instanceof FormData;
+  const config = isFormData ? { headers: { 'Content-Type': 'multipart/form-data' } } : {};
+  const response = await client.patch('/auth/me', data, config);
   return response.data;
 };
 

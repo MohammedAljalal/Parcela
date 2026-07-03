@@ -12,10 +12,12 @@ import {
   Modal,
   ScrollView,
   TextInput,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useDispatch, useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import {
   fetchCart,
@@ -146,12 +148,13 @@ CartItemCard.displayName = 'CartItemCard';
 
 // ─── Island Picker Modal ──────────────────────────────────────────────────────
 function IslandPickerModal({ visible, islands, selectedId, onSelect, onClose, loading }) {
+  const { t } = useTranslation();
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={onClose} />
       <View style={styles.modalSheet}>
         <View style={styles.modalHandle} />
-        <Text style={styles.modalTitle}>Escolher Ilha de Entrega</Text>
+        <Text style={styles.modalTitle}>{t('cart.deliveryIsland')}</Text>
 
         {loading ? (
           <ActivityIndicator color={C.primary} style={{ marginVertical: 24 }} />
@@ -176,7 +179,7 @@ function IslandPickerModal({ visible, islands, selectedId, onSelect, onClose, lo
                   )}
                 </View>
                 <Text style={styles.islandFee}>
-                  {island.deliveryFee === 0 ? 'Grátis' : formatCVE(island.deliveryFee)}
+                  {island.deliveryFee === 0 ? t('cart.free') : formatCVE(island.deliveryFee)}
                 </Text>
                 {island._id === selectedId && (
                   <Ionicons name="checkmark-circle" size={20} color={C.primary} />
@@ -187,7 +190,7 @@ function IslandPickerModal({ visible, islands, selectedId, onSelect, onClose, lo
         )}
 
         <TouchableOpacity style={styles.modalCloseBtn} onPress={onClose}>
-          <Text style={styles.modalCloseBtnText}>Fechar</Text>
+          <Text style={styles.modalCloseBtnText}>{t('common.cancel')}</Text>
         </TouchableOpacity>
       </View>
     </Modal>
@@ -198,6 +201,7 @@ function IslandPickerModal({ visible, islands, selectedId, onSelect, onClose, lo
 export default function CartScreen() {
   const dispatch = useDispatch();
   const cartNav  = useRouter();
+  const { t } = useTranslation();
 
   const {
     items,
@@ -224,6 +228,13 @@ export default function CartScreen() {
   // ── Fetch cart on mount ──────────────────────────────────────────────────
   useEffect(() => {
     dispatch(fetchCart());
+  }, [dispatch]);
+
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try { await dispatch(fetchCart()); }
+    finally { setRefreshing(false); }
   }, [dispatch]);
 
   // ── Fetch islands (lazy, when modal opens) ────────────────────────────────
@@ -260,9 +271,9 @@ export default function CartScreen() {
       const res = await previewCoupon(couponCode.trim());
       const data = res.data?.data ?? res.data;
       setCouponData(data);
-      toast.success('Cupão aplicado com sucesso!');
+      toast.success(t('cart.couponApplied'));
     } catch (err) {
-      const msg = err.response?.data?.message || 'Cupão inválido ou expirado';
+      const msg = err.response?.data?.message || t('cart.couponInvalid');
       setCouponError(msg);
       toast.error(msg);
     } finally {
@@ -280,9 +291,9 @@ export default function CartScreen() {
   const handleRemove = useCallback(async (productId, name) => {
     try {
       await dispatch(removeItem({ productId })).unwrap();
-      toast.info(`"${name}" removido do carrinho`);
+      toast.info(`"${name}" ${t('cart.itemRemoved')}`);
     } catch (err) {
-      toast.error(typeof err === 'string' ? err : 'Erro ao remover item');
+      toast.error(typeof err === 'string' ? err : t('cart.errorRemove'));
     }
   }, [dispatch]);
 
@@ -310,10 +321,10 @@ export default function CartScreen() {
         </View>
         <View style={styles.emptyState}>
           <Ionicons name="cart-outline" size={72} color={C.border} />
-          <Text style={styles.emptyTitle}>O carrinho está vazio</Text>
-          <Text style={styles.emptySubtitle}>Adicione produtos para começar as suas compras</Text>
+          <Text style={styles.emptyTitle}>{t('cart.emptyTitle')}</Text>
+          <Text style={styles.emptySubtitle}>{t('cart.emptySubtitle')}</Text>
           <TouchableOpacity style={styles.shopBtn} onPress={() => cartNav.replace('/(tabs)/home')}>
-            <Text style={styles.shopBtnText}>Explorar Produtos</Text>
+            <Text style={styles.shopBtnText}>{t('cart.explore')}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -322,7 +333,7 @@ export default function CartScreen() {
 
   const islandLabel = deliveryIsland
     ? `${deliveryIsland.name}${deliveryIsland.capital ? ` (${deliveryIsland.capital})` : ''}`
-    : 'Selecionar ilha';
+    : t('cart.selectIsland');
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -347,11 +358,19 @@ export default function CartScreen() {
         keyExtractor={(item, i) => getItemProductId(item) ?? String(i)}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.listContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[C.primary]}
+            tintColor={C.primary}
+          />
+        }
         ListHeaderComponent={
           <View>
-            <Text style={styles.screenTitle}>O Meu Carrinho</Text>
+            <Text style={styles.screenTitle}>{t('cart.title')}</Text>
             <Text style={styles.screenSubtitle}>
-              {itemCount} {itemCount === 1 ? 'item selecionado' : 'itens selecionados'} para envio
+              {t(itemCount === 1 ? 'cart.subtitle_one' : 'cart.subtitle_other', { count: itemCount })}
             </Text>
           </View>
         }
@@ -369,7 +388,7 @@ export default function CartScreen() {
         ListFooterComponent={
           <View>
             {/* ── Island Selector ────────────────────────────────────────── */}
-            <Text style={styles.sectionLabel}>Ilha de Entrega</Text>
+            <Text style={styles.sectionLabel}>{t('cart.deliveryIsland')}</Text>
             <TouchableOpacity
               style={styles.islandSelector}
               onPress={handleOpenIslandModal}
@@ -382,12 +401,12 @@ export default function CartScreen() {
             </TouchableOpacity>
 
             {/* ── Coupon Code ─────────────────────────────────────── */}
-            <Text style={styles.sectionLabel}>Código de Desconto</Text>
+            <Text style={styles.sectionLabel}>{t('cart.discountCode')}</Text>
             {couponData ? (
               <View style={styles.couponApplied}>
                 <Ionicons name="pricetag" size={16} color="#22C55E" />
                 <Text style={styles.couponAppliedText}>
-                  {couponCode.toUpperCase()} — {couponData.message || 'Desconto aplicado!'}
+                  {couponCode.toUpperCase()} — {couponData.message || t('cart.couponApplied')}
                 </Text>
                 <TouchableOpacity onPress={handleRemoveCoupon} hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}>
                   <Ionicons name="close-circle" size={18} color="#6B7280" />
@@ -397,7 +416,7 @@ export default function CartScreen() {
               <View style={styles.couponRow}>
                 <TextInput
                   style={styles.couponInput}
-                  placeholder="Inserir código..."
+                  placeholder={t('cart.enterCode')}
                   placeholderTextColor="#AAAAAA"
                   value={couponCode}
                   onChangeText={(t) => { setCouponCode(t.toUpperCase()); setCouponError(null); }}
@@ -412,7 +431,7 @@ export default function CartScreen() {
                 >
                   {couponLoading
                     ? <ActivityIndicator size="small" color="#FFF" />
-                    : <Text style={styles.couponApplyBtnText}>Aplicar</Text>
+                    : <Text style={styles.couponApplyBtnText}>{t('cart.apply')}</Text>
                   }
                 </TouchableOpacity>
               </View>
@@ -422,30 +441,30 @@ export default function CartScreen() {
             {/* ── Summary ────────────────────────────────────────────────── */}
             <View style={styles.summaryCard}>
               <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>Subtotal</Text>
+                <Text style={styles.summaryLabel}>{t('cart.subtotal')}</Text>
                 <Text style={styles.summaryValue}>{formatCVE(subtotal)}</Text>
               </View>
               {couponData?.discount ? (
                 <View style={styles.summaryRow}>
-                  <Text style={[styles.summaryLabel, { color: '#22C55E' }]}>Desconto ({couponCode})</Text>
+                  <Text style={[styles.summaryLabel, { color: '#22C55E' }]}>{t('cart.discountCode')} ({couponCode})</Text>
                   <Text style={[styles.summaryValue, { color: '#22C55E' }]}>-{formatCVE(couponData.discount)}</Text>
                 </View>
               ) : null}
               <View style={styles.summaryRow}>
                 <View style={styles.summaryLabelRow}>
-                  <Text style={styles.summaryLabel}>Taxa de Entrega</Text>
+                  <Text style={styles.summaryLabel}>{t('cart.delivery')}</Text>
                   {!deliveryIsland && (
                     <Ionicons name="information-circle-outline" size={14} color={C.textMuted} />
                   )}
                 </View>
                 <Text style={styles.summaryValue}>
                   {deliveryIsland
-                    ? deliveryFee === 0 ? 'Grátis' : formatCVE(deliveryFee)
+                    ? deliveryFee === 0 ? t('cart.free') : formatCVE(deliveryFee)
                     : '—'}
                 </Text>
               </View>
               <View style={[styles.summaryRow, styles.totalRow]}>
-                <Text style={styles.totalLabel}>Total</Text>
+                <Text style={styles.totalLabel}>{t('cart.total')}</Text>
                 <Text style={styles.totalValue}>{formatCVE(total)}</Text>
               </View>
             </View>
@@ -458,25 +477,25 @@ export default function CartScreen() {
           loading ? (
             <View style={styles.loadingBox}>
               <ActivityIndicator size="large" color={C.primary} />
-              <Text style={styles.loadingText}>A carregar carrinho...</Text>
+              <Text style={styles.loadingText}>{t('common.loading')}</Text>
             </View>
           ) : null
         }
       />
 
-      {/* ── Checkout Button ──────────────────────────────────────────────────── */}
-      <View style={styles.checkoutBar}>
-        <TouchableOpacity
-          style={[styles.checkoutBtn, !items.length && { opacity: 0.6 }]}
-          onPress={handleCheckout}
-          disabled={!items.length}
-          activeOpacity={0.85}
-        >
-          <Ionicons name="cart-outline" size={20} color={C.textPrimary} />
-          <Text style={styles.checkoutBtnText}>Finalizar Encomenda</Text>
-        </TouchableOpacity>
-      </View>
-
+      {items.length > 0 && !loading && (
+          <View style={styles.checkoutBox}>
+            <TouchableOpacity
+              style={[styles.checkoutBtn, islandsLoading && { opacity: 0.8 }]}
+              onPress={handleCheckout}
+              disabled={islandsLoading}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.checkoutBtnText}>{t('cart.checkout')}</Text>
+              <Ionicons name="arrow-forward" size={20} color="#FFF" />
+            </TouchableOpacity>
+          </View>
+        )}
       {/* ── Island Picker Modal ──────────────────────────────────────────────── */}
       <IslandPickerModal
         visible={islandModalVisible}

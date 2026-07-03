@@ -1,12 +1,13 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
-  ActivityIndicator, Image,
+  ActivityIndicator, Image, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useDispatch, useSelector } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { fetchWishlist, toggleWishlist } from '../store/slices/wishlistSlice';
 import { addItem } from '../store/slices/cartSlice';
 import toast from '../utils/toast';
@@ -35,16 +36,24 @@ const getProductName = (p) =>
 export default function WishlistScreen() {
   const router = useRouter();
   const dispatch = useDispatch();
+  const { t } = useTranslation();
   const { items, loading } = useSelector((s) => s.wishlist);
 
   useEffect(() => { dispatch(fetchWishlist()); }, [dispatch]);
 
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try { await dispatch(fetchWishlist()); }
+    finally { setRefreshing(false); }
+  }, [dispatch]);
+
   const handleRemove = async (productId) => {
     try {
       await dispatch(toggleWishlist(productId)).unwrap();
-      toast.info('Removido dos favoritos');
+      toast.info(t('wishlist.removedFromFav'));
     } catch (err) {
-      toast.error('Erro ao remover dos favoritos');
+      toast.error(t('wishlist.errorRemove'));
     }
   };
 
@@ -53,7 +62,7 @@ export default function WishlistScreen() {
       await dispatch(addItem({ productId, quantity: 1 })).unwrap();
       toast.cart(name);
     } catch (err) {
-      toast.error(typeof err === 'string' ? err : 'Erro ao adicionar ao carrinho');
+      toast.error(typeof err === 'string' ? err : t('wishlist.errorAddCart'));
     }
   };
 
@@ -113,7 +122,7 @@ export default function WishlistScreen() {
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.7}>
           <Ionicons name="arrow-back" size={24} color={C.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Lista de Desejos</Text>
+        <Text style={styles.headerTitle}>{t('wishlist.title')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -127,17 +136,25 @@ export default function WishlistScreen() {
           keyExtractor={(item, idx) => item._id ?? idx.toString()}
           renderItem={renderItem}
           contentContainerStyle={styles.list}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[C.primary]}
+              tintColor={C.primary}
+            />
+          }
           ListEmptyComponent={
             <View style={styles.emptyBox}>
               <Ionicons name="heart-outline" size={56} color={C.textMuted} />
-              <Text style={styles.emptyTitle}>A sua lista está vazia</Text>
-              <Text style={styles.emptySubtitle}>Adicione produtos à sua lista de desejos premindo o ❤️</Text>
+              <Text style={styles.emptyTitle}>{t('wishlist.emptyTitle')}</Text>
+              <Text style={styles.emptySubtitle}>{t('wishlist.emptySubtitle')}</Text>
               <TouchableOpacity
                 style={styles.shopBtn}
                 onPress={() => router.replace('/(tabs)/home')}
                 activeOpacity={0.8}
               >
-                <Text style={styles.shopBtnText}>Ir às Compras</Text>
+                <Text style={styles.shopBtnText}>{t('wishlist.shopNow')}</Text>
               </TouchableOpacity>
             </View>
           }

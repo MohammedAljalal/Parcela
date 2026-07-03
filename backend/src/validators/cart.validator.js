@@ -1,5 +1,5 @@
 // Validation rules for cart operations.
-import Joi from 'joi';
+const Joi = require('joi');
 
 const objectId = Joi.string().pattern(/^[0-9a-fA-F]{24}$/).messages({
   'string.pattern.base': 'Invalid identifier',
@@ -18,5 +18,5 @@ const setIslandSchema = Joi.object({
   islandId: objectId.required(),
 });
 
-export { addToCartSchema, updateQuantitySchema, setIslandSchema };
+module.exports = { addToCartSchema, updateQuantitySchema, setIslandSchema };
 

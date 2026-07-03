@@ -1,7 +1,7 @@
 // Manages order creation (checkout), listing, status transitions.
 'use strict';
 
-const { Order, Address, Island, Cart, Product } = require('../models');
+const { Order, Address, Island, Cart, Product, User } = require('../models');
 const { sendSuccess, sendError, sendPaginated } = require('../utils/response');
 const { createOrderFromCart } = require('../services/order.service');
 const { validateAndCalculateDiscount } = require('../services/coupon.service');
@@ -196,10 +196,21 @@ const updateOrderStatus = async (req, res, next) => {
 // GET /api/orders/admin/all
 const getAllOrders = async (req, res, next) => {
   try {
-    const { status, page = 1, limit = 20 } = req.query;
+    const { status, search, page = 1, limit = 20 } = req.query;
 
     const filter = {};
     if (status && status !== 'all') filter.status = status;
+
+    if (search) {
+      const matchingUsers = await User.find({
+        $or: [{ name: { $regex: search, $options: 'i' } }, { phone: { $regex: search, $options: 'i' } }],
+      }).select('_id');
+
+      filter.$or = [
+        { orderNumber: { $regex: search, $options: 'i' } },
+        { user: { $in: matchingUsers.map((u) => u._id) } },
+      ];
+    }
 
     const skip = (page - 1) * limit;
 

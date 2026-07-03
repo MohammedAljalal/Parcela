@@ -6,6 +6,7 @@ const router = express.Router();
 
 const {
   getCategories,
+  getCategoriesAdmin,
   getCategoryBySlug,
   createCategory,
   updateCategory,
@@ -17,6 +18,10 @@ const validate = require('../middleware/validate');
 const { createCategorySchema, updateCategorySchema } = require('../validators/category.validator');
 
 router.get('/', getCategories);
+
+// Must come before /:slug so "admin" is not parsed as a category slug.
+router.get('/admin/all', protect, restrictTo('admin'), getCategoriesAdmin);
+
 router.get('/:slug', getCategoryBySlug);
 
 router.post('/', protect, restrictTo('admin'), validate(createCategorySchema), createCategory);

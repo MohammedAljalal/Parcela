@@ -16,6 +16,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { fetchOrders } from '../store/slices/ordersSlice';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 
 // ─── Design Tokens ────────────────────────────────────────────────────────────
 const C = {
@@ -34,63 +35,53 @@ const C = {
 };
 
 // ─── Status Configuration ─────────────────────────────────────────────────────
+// We removed the static label fields from STATUS_CONFIG and FILTER_TABS.
+// The label will be evaluated dynamically inside the component via t('...')
 const STATUS_CONFIG = {
   pending: {
-    label: 'Pendente',
     color: '#FFF3CD',
     textColor: C.warning,
     borderColor: C.warning,
-    action: 'Pagar Agora',
     actionIcon: 'card-outline',
   },
   paid: {
-    label: 'Pago',
     color: '#EDE9FE',
     textColor: C.purple,
     borderColor: C.purple,
-    action: 'Recibo',
     actionIcon: 'document-text-outline',
   },
   processing: {
-    label: 'Em Processo',
     color: '#DBEAFE',
     textColor: C.primary,
     borderColor: C.primary,
-    action: 'Detalhes',
     actionIcon: 'information-circle-outline',
   },
   shipped: {
-    label: 'Enviado',
     color: '#DBEAFE',
     textColor: C.primary,
     borderColor: C.primary,
-    action: 'Rastrear',
     actionIcon: 'navigate-outline',
   },
   delivered: {
-    label: 'Entregue',
     color: '#D1FAE5',
     textColor: C.success,
     borderColor: C.success,
-    action: 'Detalhes',
     actionIcon: 'checkmark-circle-outline',
   },
   cancelled: {
-    label: 'Cancelado',
     color: '#FEE2E2',
     textColor: C.danger,
     borderColor: C.danger,
-    action: '',
     actionIcon: '',
   },
 };
 
 // ─── Filter Tabs Config ───────────────────────────────────────────────────────
 const FILTER_TABS = [
-  { label: 'Todas', value: 'all' },
-  { label: 'Em Espera', value: 'pending' },
-  { label: 'Enviadas', value: 'shipped' },
-  { label: 'Entregues', value: 'delivered' },
+  { translationKey: 'orders.all', value: 'all' },
+  { translationKey: 'orders.pending', value: 'pending' },
+  { translationKey: 'orders.shipped', value: 'shipped' },
+  { translationKey: 'orders.delivered', value: 'delivered' },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -148,11 +139,24 @@ const getInitials = (user) => {
 
 // ─── Order Card ───────────────────────────────────────────────────────────────
 const OrderCard = React.memo(({ order, onAction }) => {
+  const { t } = useTranslation();
   const config   = STATUS_CONFIG[order.status] ?? STATUS_CONFIG.pending;
   const imgUrl   = getFirstItemImage(order);
   const itemName = getFirstItemName(order);
   const vendor   = getVendorName(order);
-  const hasAction = !!config.action;
+
+  // Derive localized labels inside component
+  let localizedStatusLabel = '';
+  let localizedActionLabel = '';
+  
+  if (order.status === 'pending') { localizedStatusLabel = t('orders.pending'); localizedActionLabel = 'Pagar Agora'; } // Using static actions for now if no translation was setup for them, but statuses are translated
+  else if (order.status === 'paid') { localizedStatusLabel = 'Pago'; localizedActionLabel = 'Recibo'; }
+  else if (order.status === 'processing') { localizedStatusLabel = 'Em Processo'; localizedActionLabel = 'Detalhes'; }
+  else if (order.status === 'shipped') { localizedStatusLabel = t('orders.shipped'); localizedActionLabel = 'Rastrear'; }
+  else if (order.status === 'delivered') { localizedStatusLabel = t('orders.delivered'); localizedActionLabel = 'Detalhes'; }
+  else if (order.status === 'cancelled') { localizedStatusLabel = 'Cancelado'; }
+
+  const hasAction = !!localizedActionLabel;
 
   return (
     <View style={styles.orderCard}>
@@ -163,7 +167,7 @@ const OrderCard = React.memo(({ order, onAction }) => {
           <Text style={styles.orderDate}>{formatDate(order.createdAt)}</Text>
         </View>
         <View style={[styles.statusBadge, { backgroundColor: config.color, borderColor: config.borderColor }]}>
-          <Text style={[styles.statusText, { color: config.textColor }]}>{config.label}</Text>
+          <Text style={[styles.statusText, { color: config.textColor }]}>{localizedStatusLabel}</Text>
         </View>
       </View>
 
@@ -195,7 +199,7 @@ const OrderCard = React.memo(({ order, onAction }) => {
             onPress={() => onAction(order)}
             activeOpacity={0.7}
           >
-            <Text style={[styles.actionBtnText, { color: config.textColor }]}>{config.action}</Text>
+            <Text style={[styles.actionBtnText, { color: config.textColor }]}>{localizedActionLabel}</Text>
             {config.actionIcon ? (
               <Ionicons name={config.actionIcon} size={14} color={config.textColor} />
             ) : null}
@@ -212,6 +216,7 @@ OrderCard.displayName = 'OrderCard';
 export default function OrdersScreen() {
   const dispatch = useDispatch();
   const router   = useRouter();
+  const { t }    = useTranslation();
 
   const user     = useSelector((s) => s.auth.user);
   const { orders, stats, loading, error } = useSelector((s) => s.orders);
@@ -273,17 +278,17 @@ export default function OrdersScreen() {
         ListHeaderComponent={
           <View>
             {/* Page Title */}
-            <Text style={styles.pageTitle}>Minhas Encomendas</Text>
-            <Text style={styles.pageSubtitle}>Acompanhe o estado das suas compras e entregas.</Text>
+            <Text style={styles.pageTitle}>{t('orders.title')}</Text>
+            <Text style={styles.pageSubtitle}>{t('orders.subtitle')}</Text>
 
             {/* Stats Cards */}
             <View style={styles.statsRow}>
               <View style={styles.statCard}>
-                <Text style={styles.statLabel}>EM TRÂNSITO</Text>
+                <Text style={styles.statLabel}>{t('orders.inTransit')}</Text>
                 <Text style={styles.statCount}>{String(stats.inTransit ?? 0).padStart(2, '0')}</Text>
               </View>
               <View style={styles.statCard}>
-                <Text style={styles.statLabel}>CONCLUÍDAS</Text>
+                <Text style={styles.statLabel}>{t('orders.completed')}</Text>
                 <Text style={styles.statCount}>{String(stats.completed ?? 0).padStart(2, '0')}</Text>
               </View>
             </View>
@@ -299,12 +304,10 @@ export default function OrdersScreen() {
                   key={tab.value}
                   style={[styles.filterTab, activeFilter === tab.value && styles.filterTabActive]}
                   onPress={() => handleFilterChange(tab.value)}
-                  activeOpacity={0.7}
+                  activeOpacity={0.8}
                 >
-                  <Text
-                    style={[styles.filterTabText, activeFilter === tab.value && styles.filterTabTextActive]}
-                  >
-                    {tab.label}
+                  <Text style={[styles.filterTabText, activeFilter === tab.value && styles.filterTabTextActive]}>
+                    {t(tab.translationKey)}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -314,7 +317,7 @@ export default function OrdersScreen() {
             {loading && (
               <View style={styles.loadingBox}>
                 <ActivityIndicator size="large" color={C.primary} />
-                <Text style={styles.loadingText}>A carregar encomendas...</Text>
+                <Text style={styles.loadingText}>{t('common.loading')}</Text>
               </View>
             )}
 
@@ -324,7 +327,7 @@ export default function OrdersScreen() {
                 <Ionicons name="cloud-offline-outline" size={40} color={C.danger} />
                 <Text style={styles.errorText}>{error}</Text>
                 <TouchableOpacity style={styles.retryBtn} onPress={() => loadOrders(activeFilter)}>
-                  <Text style={styles.retryBtnText}>Tentar novamente</Text>
+                  <Text style={styles.retryBtnText}>{t('common.retry')}</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -337,17 +340,17 @@ export default function OrdersScreen() {
           !loading && !error ? (
             <View style={styles.emptyState}>
               <Ionicons name="receipt-outline" size={64} color={C.border} />
-              <Text style={styles.emptyTitle}>Nenhuma encomenda</Text>
+              <Text style={styles.emptyTitle}>{t('orders.noOrders')}</Text>
               <Text style={styles.emptySubtitle}>
                 {activeFilter === 'all'
-                  ? 'Ainda não realizaste nenhuma encomenda.'
-                  : `Sem encomendas com o estado "${FILTER_TABS.find(t => t.value === activeFilter)?.label}".`}
+                  ? t('orders.noOrdersSubtitle')
+                  : t('orders.noOrdersSubtitle')}
               </Text>
               <TouchableOpacity
                 style={styles.shopBtn}
                 onPress={() => router.replace('/(tabs)/home')}
               >
-                <Text style={styles.shopBtnText}>Explorar Produtos</Text>
+                <Text style={styles.shopBtnText}>{t('orders.shopNow')}</Text>
               </TouchableOpacity>
             </View>
           ) : null

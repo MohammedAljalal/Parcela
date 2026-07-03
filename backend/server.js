@@ -5,6 +5,7 @@ const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
 const morgan = require('morgan');
+const rateLimit = require('express-rate-limit');
 
 const connectDB = require('./src/config/database.js');
 
@@ -29,6 +30,7 @@ const bannerRoutes = require('./src/routes/banner.routes.js');
 const couponRoutes = require('./src/routes/coupon.routes.js');
 const paymentRoutes = require('./src/routes/payment.routes.js');
 const stripeRoutes = require('./src/routes/stripe.routes.js');
+const adminRoutes = require('./src/routes/admin.routes.js');
 
 const app = express();
 
@@ -52,6 +54,18 @@ app.use('/api/stripe', stripeRoutes);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Global rate limiting. The admin dashboard fires several parallel requests per
+// page (stats, charts, tables with background refetching), so the ceiling is set
+// generously — this guards against abuse/DoS, not normal interactive usage.
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 1000,
+  message: 'Too many requests, please try again later',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use('/api/', globalLimiter);
 
 if (env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
@@ -80,6 +94,7 @@ app.use('/api/wishlist', wishlistRoutes);
 app.use('/api/banners', bannerRoutes);
 app.use('/api/coupons', couponRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Must be after all routes.
 app.use(notFound);

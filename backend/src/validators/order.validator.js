@@ -1,6 +1,6 @@
 // Validation rules for order creation and status updates.
-import Joi from 'joi';
-import { ORDER_STATUS, PAYMENT_METHOD } from '../config/constants.js';
+const Joi = require('joi');
+const { ORDER_STATUS, PAYMENT_METHOD } = require('../config/constants');
 
 const objectId = Joi.string().pattern(/^[0-9a-fA-F]{24}$/).messages({
   'string.pattern.base': 'Invalid identifier',
@@ -19,5 +19,5 @@ const updateOrderStatusSchema = Joi.object({
   trackingCode: Joi.string().trim().optional().allow(''),
 });
 
-export { createOrderSchema, updateOrderStatusSchema };
+module.exports = { createOrderSchema, updateOrderStatusSchema };
 

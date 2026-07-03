@@ -62,6 +62,7 @@ const orderSchema = new Schema(
 
     trackingCode: { type: String, unique: true, sparse: true },
     receiptUrl: { type: String, default: null },
+    deliveredAt: { type: Date, default: null },
 
     notes: { type: String, default: '', maxlength: 500 },
   },

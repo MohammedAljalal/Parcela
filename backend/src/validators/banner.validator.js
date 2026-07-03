@@ -1,5 +1,5 @@
 // Validation rules for promotional banners.
-import Joi from 'joi';
+const Joi = require('joi');
 
 const objectId = Joi.string().pattern(/^[0-9a-fA-F]{24}$/).messages({
   'string.pattern.base': 'Invalid identifier',
@@ -16,7 +16,9 @@ const bilingualText = (required = false) => {
 const createBannerSchema = Joi.object({
   title: bilingualText(true),
   subtitle: bilingualText(false),
-  image: Joi.string().trim().required(),
+  // The image can come from an uploaded file (req.file, handled in the
+  // controller) instead of this field, so it cannot be required here.
+  image: Joi.string().trim().optional().allow(''),
   ctaLabel: bilingualText(false),
   ctaLink: Joi.string().trim().optional().allow(''),
   island: objectId.optional().allow(null),
@@ -41,5 +43,5 @@ const updateBannerSchema = Joi.object({
   .min(1)
   .messages({ 'object.min': 'At least one field is required' });
 
-export { createBannerSchema, updateBannerSchema };
+module.exports = { createBannerSchema, updateBannerSchema };
 

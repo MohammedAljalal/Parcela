@@ -1,5 +1,5 @@
 // Validation rules for product management and listing queries.
-import Joi from 'joi';
+const Joi = require('joi');
 
 const objectId = Joi.string().pattern(/^[0-9a-fA-F]{24}$/).messages({
   'string.pattern.base': 'Invalid identifier',
@@ -76,5 +76,5 @@ const listProductsQuerySchema = Joi.object({
   limit: Joi.number().integer().min(1).max(50).optional(),
 });
 
-export { createProductSchema, updateProductSchema, listProductsQuerySchema };
+module.exports = { createProductSchema, updateProductSchema, listProductsQuerySchema };
 

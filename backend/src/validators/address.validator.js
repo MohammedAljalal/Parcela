@@ -1,5 +1,5 @@
 // Validation rules for address book entries.
-import Joi from 'joi';
+const Joi = require('joi');
 
 const objectId = Joi.string().pattern(/^[0-9a-fA-F]{24}$/).messages({
   'string.pattern.base': 'Invalid identifier',
@@ -29,5 +29,5 @@ const updateAddressSchema = Joi.object({
   .min(1)
   .messages({ 'object.min': 'At least one field is required' });
 
-export { createAddressSchema, updateAddressSchema };
+module.exports = { createAddressSchema, updateAddressSchema };
 

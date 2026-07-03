@@ -1,5 +1,5 @@
 // Validation rules for listing notifications.
-import Joi from 'joi';
+const Joi = require('joi');
 
 const listNotificationsQuerySchema = Joi.object({
   isRead: Joi.boolean().optional(),
@@ -7,5 +7,5 @@ const listNotificationsQuerySchema = Joi.object({
   limit: Joi.number().integer().min(1).max(50).optional(),
 });
 
-export { listNotificationsQuerySchema };
+module.exports = { listNotificationsQuerySchema };
 

@@ -2,7 +2,35 @@
 'use strict';
 
 const { Category } = require('../models');
-const { sendSuccess, sendError } = require('../utils/response');
+const { sendSuccess, sendError, sendPaginated } = require('../utils/response');
+
+// GET /api/categories/admin/all
+// Admin listing: includes inactive categories and subcategories, with search/pagination.
+const getCategoriesAdmin = async (req, res, next) => {
+  try {
+    const { search, isActive, parent, page = 1, limit = 50 } = req.query;
+
+    const filter = {};
+    if (isActive !== undefined) filter.isActive = isActive === 'true' || isActive === true;
+    if (parent !== undefined) filter.parent = parent === 'null' ? null : parent;
+    if (search) filter['name.pt'] = { $regex: search, $options: 'i' };
+
+    const skip = (page - 1) * limit;
+
+    const [categories, total] = await Promise.all([
+      Category.find(filter)
+        .populate('parent', 'name')
+        .sort({ sortOrder: 1, createdAt: -1 })
+        .skip(skip)
+        .limit(Number(limit)),
+      Category.countDocuments(filter),
+    ]);
+
+    return sendPaginated(res, categories, { total, page: Number(page), limit: Number(limit) });
+  } catch (error) {
+    next(error);
+  }
+};
 
 // GET /api/categories
 const getCategories = async (req, res, next) => {
@@ -96,4 +124,4 @@ const deleteCategory = async (req, res, next) => {
   }
 };
 
-module.exports = { getCategories, getCategoryBySlug, createCategory, updateCategory, deleteCategory };
+module.exports = { getCategories, getCategoriesAdmin, getCategoryBySlug, createCategory, updateCategory, deleteCategory };

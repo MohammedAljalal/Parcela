@@ -1,8 +1,10 @@
 // Manages the current user's notifications.
 'use strict';
 
-const { Notification } = require('../models');
+const { Notification, User } = require('../models');
 const { sendSuccess, sendError } = require('../utils/response');
+const { createBulkNotification } = require('../services/notification.service');
+const { NOTIFICATION_TYPE } = require('../config/constants');
 
 // GET /api/notifications
 const getMyNotifications = async (req, res, next) => {
@@ -69,4 +71,38 @@ const deleteNotification = async (req, res, next) => {
   }
 };
 
-module.exports = { getMyNotifications, markAsRead, markAllAsRead, deleteNotification };
+// POST /api/admin/notifications/broadcast — admin-only: send a notification to many users at once.
+const broadcastNotification = async (req, res, next) => {
+  try {
+    const { target, userIds, title, body } = req.body;
+
+    let recipientIds = [];
+
+    if (target === 'specific') {
+      recipientIds = userIds;
+    } else {
+      const filter = { isActive: true };
+      if (target === 'customers') filter.role = 'customer';
+      if (target === 'vendors') filter.role = 'vendor';
+
+      const users = await User.find(filter).select('_id');
+      recipientIds = users.map((u) => u._id);
+    }
+
+    if (recipientIds.length === 0) {
+      return sendError(res, 'No recipients found for this target', 400);
+    }
+
+    await createBulkNotification({
+      userIds: recipientIds,
+      type: NOTIFICATION_TYPE.PROMO,
+      data: { title, body },
+    });
+
+    return sendSuccess(res, { recipientCount: recipientIds.length }, 'Notification broadcast sent successfully');
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { getMyNotifications, markAsRead, markAllAsRead, deleteNotification, broadcastNotification };

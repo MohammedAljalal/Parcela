@@ -1,5 +1,5 @@
 // Validation rules for island management (admin only).
-import Joi from 'joi';
+const Joi = require('joi');
 
 const daysRange = Joi.object({
   min: Joi.number().integer().min(1).required(),
@@ -30,5 +30,5 @@ const updateIslandSchema = Joi.object({
   .min(1)
   .messages({ 'object.min': 'At least one field is required' });
 
-export { createIslandSchema, updateIslandSchema };
+module.exports = { createIslandSchema, updateIslandSchema };
 

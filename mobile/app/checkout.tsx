@@ -80,7 +80,7 @@ export default function CheckoutScreen() {
   const [islands, setIslands] = useState([]);
   const [selectedIsland, setSelectedIsland] = useState(deliveryIsland ?? null);
   const [loadingIslands, setLoadingIslands] = useState(true);
-  const [paymentMethod, setPaymentMethod] = useState('cash');
+  const [paymentMethod, setPaymentMethod] = useState('vinti4');
 
   const loadingData = loadingAddresses || loadingIslands;
 
@@ -151,16 +151,27 @@ export default function CheckoutScreen() {
       const orderData = await dispatch(submitOrder({
         addressId: selectedAddress._id,
         islandId: selectedIsland._id,
-        paymentMethod: paymentMethod === 'card' ? 'card' : 'cash_on_delivery',
+        paymentMethod:
+          paymentMethod === 'card' ? 'card' :
+          paymentMethod === 'vinti4' ? 'vinti4_multibanco' :
+          'cash_on_delivery',
       })).unwrap();
 
       if (paymentMethod === 'card') {
         // Fetch checkout session from backend
         const intentRes = await apiClient.post('/stripe/checkout', { orderId: orderData.order._id });
         const { url } = intentRes.data.data;
-        
+
         // Open the Stripe hosted checkout page
         await Linking.openURL(url);
+      } else if (paymentMethod === 'vinti4') {
+        // Backend hosts SISP's auto-submit payment form at this URL —
+        // opening it in the system browser lets the shopper enter their
+        // card details directly on SISP's own (PCI-compliant) page.
+        const paymentRes = await apiClient.post('/payments/initiate', { orderId: orderData.order._id });
+        const { paymentUrl } = paymentRes.data.data;
+
+        await Linking.openURL(paymentUrl);
       }
 
       // Clear cart state after successful order
@@ -174,7 +185,7 @@ export default function CheckoutScreen() {
       const msg = typeof err === 'string' ? err : (err?.message ?? 'Falha ao criar encomenda. Tente novamente.');
       toast.error(msg, 'Erro no Pagamento');
     }
-  }, [dispatch, router, selectedAddress, selectedIsland]);
+  }, [dispatch, router, selectedAddress, selectedIsland, paymentMethod]);
 
   if (loadingData) {
     return (
@@ -348,6 +359,22 @@ export default function CheckoutScreen() {
               <Text style={styles.paymentSubtitle}>Pague agora com segurança</Text>
             </View>
             {paymentMethod === 'card' && <Ionicons name="checkmark-circle" size={22} color={C.primary} />}
+          </TouchableOpacity>
+
+          {/* Vinti4/Multibanco Option */}
+          <TouchableOpacity
+            style={[styles.paymentCard, paymentMethod === 'vinti4' && styles.paymentCardSelected]}
+            activeOpacity={0.8}
+            onPress={() => setPaymentMethod('vinti4')}
+          >
+            <View style={[styles.paymentIconWrap, paymentMethod === 'vinti4' && styles.paymentIconWrapSelected]}>
+              <MaterialCommunityIcons name="bank-outline" size={22} color={paymentMethod === 'vinti4' ? '#FFF' : C.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.paymentTitle}>Vinti4 / Multibanco</Text>
+              <Text style={styles.paymentSubtitle}>Selecionado automaticamente</Text>
+            </View>
+            {paymentMethod === 'vinti4' && <Ionicons name="checkmark-circle" size={22} color={C.primary} />}
           </TouchableOpacity>
 
           {/* Cash Option */}

@@ -1,9 +1,12 @@
 import axios from 'axios';
 
 // ─── Axios Instance ───────────────────────────────────────────────────────────
+// baseURL comes from EXPO_PUBLIC_API_URL (mobile/.env). 127.0.0.1 only works
+// when the app runs inside a simulator/emulator on the SAME machine as the
+// backend — a physical phone on Expo Go needs your computer's LAN IP instead
+// (e.g. http://192.168.1.42:5000/api). See deployment guide for how to find it.
 const client = axios.create({
-  // Use 127.0.0.1:5000 for web/emulator local testing
-  baseURL: 'http://127.0.0.1:5000/api',
+  baseURL: process.env.EXPO_PUBLIC_API_URL || 'http://127.0.0.1:5000/api',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',

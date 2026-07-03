@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useDispatch, useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
 import CountryPickerModal from '../components/CountryPickerModal';
@@ -58,8 +59,15 @@ const GoogleIcon = () => (
 const RegisterScreen = () => {
   const router = useRouter();
   const dispatch = useDispatch();
+  const { t } = useTranslation();
 
   const { loading, error } = useSelector((state) => state.auth);
+
+  // Recreate TABS dynamically so they update when language changes
+  const TABS = [
+    { key: 'phone', label: t('register.tabPhone') },
+    { key: 'email', label: t('register.tabEmail') },
+  ];
 
   // Google Auth Session (same client IDs as LoginScreen)
   const [request, response, promptAsync] = Google.useAuthRequest({
@@ -80,9 +88,9 @@ const RegisterScreen = () => {
         console.log('[Google/Register] Auth success — dispatching loginWithGoogle');
         dispatch(loginWithGoogle(token))
           .unwrap()
-          .then(() => toast.success('Conta criada!', 'Bem-vindo'))
+          .then(() => toast.success(t('register.successMessage'), t('register.successTitle')))
           .catch((err) => {
-            toast.error(typeof err === 'string' ? err : 'Falha ao autenticar', 'Erro Google');
+            toast.error(typeof err === 'string' ? err : t('register.errorGoogle'), 'Erro Google');
           });
       } else {
         console.error('[Google/Register] No token in response:', authentication);
@@ -125,19 +133,19 @@ const RegisterScreen = () => {
       dispatch(sendOtp(fullPhone))
         .unwrap()
         .then(() => {
-          toast.info(`Código enviado para ${fullPhone}`);
+          toast.info(`${t('register.codeSentTo')} ${fullPhone}`);
           router.push({ pathname: '/otp-verify', params: { phone: fullPhone, prefilledName: name } });
         })
         .catch((err) => {
-          toast.error(typeof err === 'string' ? err : 'Falha ao enviar código', 'Erro');
+          toast.error(typeof err === 'string' ? err : t('register.errorSendCode'), 'Erro');
         });
     } else {
       const credentials = { type: 'email', name, email, password };
       dispatch(registerUser(credentials))
         .unwrap()
-        .then(() => toast.success('Conta criada com sucesso!', 'Bem-vindo'))
+        .then(() => toast.success(t('register.successMessage'), t('register.successTitle')))
         .catch((err) => {
-          toast.error(typeof err === 'string' ? err : 'Falha ao criar conta', 'Erro');
+          toast.error(typeof err === 'string' ? err : t('register.errorGeneric'), 'Erro');
         });
     }
   };
@@ -164,8 +172,8 @@ const RegisterScreen = () => {
           {/* ── Hero ── */}
           <View style={styles.hero}>
             <AppLogo />
-            <Text style={styles.appName}>Criar Conta</Text>
-            <Text style={styles.tagline}>Junte-se à Parcela hoje.</Text>
+            <Text style={styles.appName}>{t('register.title')}</Text>
+            <Text style={styles.tagline}>{t('register.tagline')}</Text>
           </View>
 
           {/* ── Card ── */}
@@ -184,10 +192,10 @@ const RegisterScreen = () => {
 
             {/* ── Common Name Input ── */}
             <Input
-              label="Nome Completo"
+              label={t('register.fullName')}
               value={name}
               onChangeText={setName}
-              placeholder="Seu nome"
+              placeholder={t('register.namePlaceholder')}
               editable={!loading}
             />
 
@@ -195,7 +203,7 @@ const RegisterScreen = () => {
             {activeTab === 'phone' && (
               <View>
                 <Input
-                  label="Número de Telefone"
+                  label={t('register.phoneLabel')}
                   value={phone}
                   onChangeText={setPhone}
                   placeholder="000 00 00"
@@ -222,16 +230,16 @@ const RegisterScreen = () => {
             {activeTab === 'email' && (
               <View>
                 <Input
-                  label="Email"
+                  label={t('register.emailLabel')}
                   value={email}
                   onChangeText={setEmail}
-                  placeholder="seuemail@exemplo.com"
+                  placeholder={t('register.emailPlaceholder')}
                   keyboardType="email-address"
                   autoCapitalize="none"
                   editable={!loading}
                 />
                 <Input
-                  label="Palavra-passe"
+                  label={t('register.passwordLabel')}
                   value={password}
                   onChangeText={setPassword}
                   placeholder="••••••••"
@@ -243,7 +251,7 @@ const RegisterScreen = () => {
 
             {/* ── Primary CTA ── */}
             <Button
-              label="Criar Conta"
+              label={t('register.createAccount')}
               onPress={handleRegister}
               disabled={!canContinue || loading}
               loading={loading}
@@ -252,7 +260,7 @@ const RegisterScreen = () => {
             {/* ── Divider ── */}
             <View style={styles.dividerRow}>
               <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>OU</Text>
+              <Text style={styles.dividerText}>{t('register.or')}</Text>
               <View style={styles.dividerLine} />
             </View>
 
@@ -264,14 +272,14 @@ const RegisterScreen = () => {
               disabled={loading || !request}
             >
               <GoogleIcon />
-              <Text style={styles.googleLabel}>Continuar com Google</Text>
+              <Text style={styles.googleLabel}>{t('register.continueWithGoogle')}</Text>
             </TouchableOpacity>
 
             {/* ── Login link ── */}
             <View style={styles.signupRow}>
-              <Text style={styles.signupText}>Já tem uma conta? </Text>
+              <Text style={styles.signupText}>{t('register.alreadyHaveAccount')}</Text>
               <TouchableOpacity activeOpacity={0.7} disabled={loading} onPress={() => router.replace('/login')}>
-                <Text style={styles.signupLink}>Entrar</Text>
+                <Text style={styles.signupLink}>{t('register.signIn')}</Text>
               </TouchableOpacity>
             </View>
           </View>

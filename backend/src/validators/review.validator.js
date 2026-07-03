@@ -1,5 +1,5 @@
 // Validation rules for product reviews.
-import Joi from 'joi';
+const Joi = require('joi');
 
 const objectId = Joi.string().pattern(/^[0-9a-fA-F]{24}$/).messages({
   'string.pattern.base': 'Invalid identifier',
@@ -23,5 +23,5 @@ const updateReviewSchema = Joi.object({
   .min(1)
   .messages({ 'object.min': 'At least one field is required' });
 
-export { createReviewSchema, updateReviewSchema };
+module.exports = { createReviewSchema, updateReviewSchema };
 

@@ -3,15 +3,21 @@ import { View, ActivityIndicator } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { Provider, useDispatch, useSelector } from 'react-redux';
 import Toast from 'react-native-toast-message';
+import Constants from 'expo-constants';
 import store from '../src/store';
 import { injectStore } from '../src/api/client';
 import { bootstrapAuth } from '../src/store/slices/authSlice';
 import { bootstrapApp } from '../src/store/appSlice';
+import { StripeAppProvider } from '../src/components/StripeWrapper';
 
 // ─── Inject the Redux store into the Axios client ─────────────────────────────
-// This MUST be called before any API requests are made so that the interceptor
-// can read the auth token from the Redux state.
 injectStore(store);
+
+// Publishable key from .env (EXPO_PUBLIC_ prefix makes it available at runtime)
+const STRIPE_PK =
+  process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ??
+  Constants.expoConfig?.extra?.stripePublishableKey ??
+  '';
 
 // ─── Public routes that authenticated users should NOT see ────────────────────
 const PUBLIC_ROUTES = ['index', 'login', 'register', 'otp-verify'];
@@ -24,58 +30,44 @@ function AuthWrapper() {
   const { user, isInitialized } = useSelector((state) => state.auth);
   const isAppInitialized = useSelector((state) => state.app.isAppInitialized);
 
-  // Use a ref to prevent navigation running before the router is ready
   const isMounted = useRef(false);
 
-  // Bootstrap on mount: restore language + auth session
   useEffect(() => {
     dispatch(bootstrapApp());
     dispatch(bootstrapAuth());
   }, [dispatch]);
 
-  // Mark mounted after first render so navigation is safe
   useEffect(() => {
     isMounted.current = true;
   }, []);
 
-  // Auth-based routing — only runs once both bootstraps are complete
   useEffect(() => {
     if (!isInitialized || !isAppInitialized || !isMounted.current) return;
 
-    const currentRoute = segments[0] ?? 'index';
-    const isOnPublicRoute = PUBLIC_ROUTES.includes(currentRoute);
+    const inTabsGroup = segments[0] === '(tabs)';
 
-    console.log('[Nav] user:', !!user, '| route:', currentRoute, '| public:', isOnPublicRoute);
-
-    if (user && isOnPublicRoute) {
-      // Logged in but still on a public page → go to Home Tab
-      console.log('[Nav] Authenticated — redirecting to /(tabs)/home');
-      router.replace('/(tabs)/home');
-    } else if (!user && !isOnPublicRoute) {
-      // Not logged in and trying to access a protected page → go to Splash
-      console.log('[Nav] Not authenticated — redirecting to /');
-      router.replace('/');
+    if (user && !inTabsGroup) {
+      // Defer slightly to ensure the layout has mounted
+      setTimeout(() => router.replace('/(tabs)/home'), 1);
+    } else if (!user && inTabsGroup) {
+      setTimeout(() => router.replace('/'), 1);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, isInitialized, isAppInitialized]);
+  }, [user, isInitialized, isAppInitialized, segments]);
 
-  // Show loading spinner while either bootstrap is running
-  if (!isInitialized || !isAppInitialized) {
-    return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F5F5F5' }}>
-        <ActivityIndicator size="large" color="#1A237E" />
-      </View>
-    );
-  }
-
+  // Expo Router requires a Navigator to always be rendered.
+  // Returning an ActivityIndicator directly causes "Attempted to navigate before mounting"
+  // Since app/index.tsx renders a SplashScreen, we can just return Stack safely.
   return <Stack screenOptions={{ headerShown: false }} />;
 }
 
 export default function RootLayout() {
   return (
     <Provider store={store}>
-      <AuthWrapper />
-      <Toast />
+      {/* StripeAppProvider wraps the whole app so any screen can use Stripe */}
+      <StripeAppProvider publishableKey={STRIPE_PK}>
+        <AuthWrapper />
+        <Toast />
+      </StripeAppProvider>
     </Provider>
   );
 }

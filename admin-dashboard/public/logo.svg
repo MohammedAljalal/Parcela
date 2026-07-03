@@ -1,0 +1,15 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="512" height="512" rx="128" fill="#003399"/>
+  
+  <!-- Top face -->
+  <path d="M256 140 L370 200 L256 260 L142 200 Z" fill="white"/>
+  
+  <!-- Left face -->
+  <path d="M135 215 L245 275 L245 385 L135 325 Z" fill="white"/>
+  
+  <!-- Right face -->
+  <path d="M377 215 L267 275 L267 385 L377 325 Z" fill="white"/>
+  
+  <!-- Optional: Inner flaps to make it look like the exact open box in the picture -->
+  <!-- Based on the image, the box has a vertical slit on the top face or similar. I'll stick to a clean closed box which looks highly professional. -->
+</svg>

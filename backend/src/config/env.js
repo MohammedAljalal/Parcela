@@ -20,11 +20,12 @@ module.exports = {
 
   GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
 
-  VINTI4_MERCHANT_ID: process.env.VINTI4_MERCHANT_ID,
-  VINTI4_POS_ID: process.env.VINTI4_POS_ID || '12345',
-  VINTI4_POS_AUTH_CODE: process.env.VINTI4_POS_AUTH_CODE || '12345',
-  VINTI4_WEBHOOK_SECRET: process.env.VINTI4_WEBHOOK_SECRET || 'secret',
-  VINTI4_GATEWAY_URL: process.env.VINTI4_GATEWAY_URL || 'http://localhost:5000/mock-vinti4',
+  // SISP / Vinti4Net — credentials issued by SISP after merchant registration at
+  // comerciante.vinti4.cv. In sandbox, SISP provides test POS_ID/POS_AUT_CODE
+  // pointing at their staging host; swap SISP_URL to production when going live.
+  SISP_POS_ID: process.env.SISP_POS_ID,
+  SISP_POS_AUT_CODE: process.env.SISP_POS_AUT_CODE,
+  SISP_URL: process.env.SISP_URL || 'https://mc.vinti4net.cv/payments',
 
   STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY || 'sk_test_123',
   STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET || 'whsec_123',

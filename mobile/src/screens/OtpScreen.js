@@ -15,6 +15,7 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useDispatch, useSelector } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 
 import { verifyOtp, sendOtp, clearError } from '../store/slices/authSlice';
 import toast from '../utils/toast';
@@ -39,6 +40,7 @@ const CODE_LENGTH = 6;
 export default function OtpScreen() {
   const router     = useRouter();
   const dispatch   = useDispatch();
+  const { t }      = useTranslation();
   const { phone, prefilledName }  = useLocalSearchParams();
 
   const { loading, loadingOtp, error } = useSelector((state) => state.auth);
@@ -149,9 +151,9 @@ export default function OtpScreen() {
           </View>
 
           {/* ── Title ── */}
-          <Text style={styles.title}>Verificar Número</Text>
+          <Text style={styles.title}>{t('otp.title')}</Text>
           <Text style={styles.subtitle}>
-            Introduza o código de 6 dígitos{'\n'}enviado para{' '}
+            {t('otp.subtitle')}{'\n'}
             <Text style={styles.phoneHighlight}>{phone}</Text>
           </Text>
 
@@ -221,7 +223,7 @@ export default function OtpScreen() {
             {loading ? (
               <ActivityIndicator color="#FFF" size="small" />
             ) : (
-              <Text style={styles.verifyBtnText}>Verificar Código</Text>
+              <Text style={styles.verifyBtnText}>{t('otp.verify')}</Text>
             )}
           </TouchableOpacity>
 

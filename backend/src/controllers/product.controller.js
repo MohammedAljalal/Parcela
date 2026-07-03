@@ -5,6 +5,44 @@ const { Product, Category, Island } = require('../models');
 const { sendSuccess, sendError, sendPaginated } = require('../utils/response');
 const { uploadImage, deleteImage } = require('../lib/cloudinary');
 
+// GET /api/products/admin/all
+// Admin/vendor listing: includes inactive products and supports management filters.
+// Vendors only ever see their own products; admins see everything.
+const getProductsAdmin = async (req, res, next) => {
+  try {
+    const { category, search, isActive, page = 1, limit = 20, sort } = req.query;
+
+    const filter = {};
+    if (category) filter.category = category;
+    if (isActive !== undefined) filter.isActive = isActive === 'true' || isActive === true;
+    if (search) filter.$text = { $search: search };
+    if (req.user.role === 'vendor') filter.vendor = req.user._id;
+
+    const sortMap = {
+      newest: { createdAt: -1 },
+      price_asc: { price: 1 },
+      price_desc: { price: -1 },
+      stock_asc: { stock: 1 },
+    };
+    const sortOption = sortMap[sort] || sortMap.newest;
+
+    const skip = (page - 1) * limit;
+
+    const [products, total] = await Promise.all([
+      Product.find(filter)
+        .populate('category', 'name slug')
+        .sort(sortOption)
+        .skip(skip)
+        .limit(Number(limit)),
+      Product.countDocuments(filter),
+    ]);
+
+    return sendPaginated(res, products, { total, page: Number(page), limit: Number(limit) });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // GET /api/products
 const getProducts = async (req, res, next) => {
   try {
@@ -49,13 +87,26 @@ const getProducts = async (req, res, next) => {
 };
 
 // GET /api/products/:slug
+// Public shoppers only ever see active products. Admins/vendors (identified via
+// optionalAuth on this route) also need to open inactive products to edit them
+// from the dashboard, so the isActive filter is skipped for them.
 const getProductBySlug = async (req, res, next) => {
   try {
-    const product = await Product.findOne({ slug: req.params.slug, isActive: true })
+    const isStaff = req.user?.role === 'admin' || req.user?.role === 'vendor';
+
+    const filter = { slug: req.params.slug };
+    if (!isStaff) filter.isActive = true;
+
+    const product = await Product.findOne(filter)
       .populate('category', 'name slug')
       .populate('availableIslands', 'name code');
 
     if (!product) return sendError(res, 'Product not found', 404);
+
+    // Vendors may only view their own products this way, even when inactive.
+    if (req.user?.role === 'vendor' && product.vendor?.toString() !== req.user._id.toString()) {
+      return sendError(res, 'Product not found', 404);
+    }
 
     return sendSuccess(res, { product }, 'Product fetched successfully');
   } catch (error) {
@@ -172,6 +223,7 @@ const deleteProduct = async (req, res, next) => {
 
 module.exports = {
   getProducts,
+  getProductsAdmin,
   getProductBySlug,
   createProduct,
   updateProduct,

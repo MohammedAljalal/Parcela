@@ -8,12 +8,18 @@ const { validateAndCalculateDiscount } = require('../services/coupon.service');
 // GET /api/coupons
 const getCoupons = async (req, res, next) => {
   try {
-    const { page = 1, limit = 20 } = req.query;
+    const { search, isActive, type, page = 1, limit = 20 } = req.query;
+
+    const filter = {};
+    if (isActive !== undefined) filter.isActive = isActive === 'true' || isActive === true;
+    if (type) filter.type = type;
+    if (search) filter.code = { $regex: search, $options: 'i' };
+
     const skip = (page - 1) * limit;
 
     const [coupons, total] = await Promise.all([
-      Coupon.find().sort({ createdAt: -1 }).skip(skip).limit(Number(limit)),
-      Coupon.countDocuments(),
+      Coupon.find(filter).sort({ createdAt: -1 }).skip(skip).limit(Number(limit)),
+      Coupon.countDocuments(filter),
     ]);
 
     return sendPaginated(res, coupons, { total, page: Number(page), limit: Number(limit) });

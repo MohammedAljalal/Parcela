@@ -25,6 +25,7 @@ const {
   loginWithEmail,
 } = require('../controllers/auth.controller.js');
 const { protect } = require('../middleware/auth.middleware.js');
+const upload = require('../middleware/upload.middleware.js');
 const validate = require('../middleware/validate.js');
 const otpRateLimiter = require('../middleware/otpRateLimiter.js');
 const {
@@ -53,7 +54,7 @@ router.post('/refresh', validate(refreshTokenSchema), refreshAccessToken);
 
 // ── Protected Profile Routes ──────────────────────────────────────────────────
 router.get('/me',      protect, getMe);
-router.patch('/me',    protect, validate(updateProfileSchema), updateProfile);
+router.patch('/me',    protect, upload.single('avatar'), validate(updateProfileSchema), updateProfile);
 router.post('/logout', protect, logout);
 
 module.exports = router;

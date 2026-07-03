@@ -4,6 +4,47 @@
 const { Review, Order } = require('../models');
 const { sendSuccess, sendError, sendPaginated } = require('../utils/response');
 const { ORDER_STATUS } = require('../config/constants');
+// Admin moderation listing: every review across all products, with filters.
+const getAllReviewsAdmin = async (req, res, next) => {
+  try {
+    const { rating, isActive, page = 1, limit = 20 } = req.query;
+
+    const filter = {};
+    if (rating) filter.rating = Number(rating);
+    if (isActive !== undefined) filter.isActive = isActive === 'true' || isActive === true;
+
+    const skip = (page - 1) * limit;
+
+    const [reviews, total] = await Promise.all([
+      Review.find(filter)
+        .populate('user', 'name avatar email')
+        .populate('product', 'name slug images')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(Number(limit)),
+      Review.countDocuments(filter),
+    ]);
+
+    return sendPaginated(res, reviews, { total, page: Number(page), limit: Number(limit) });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// PATCH /api/reviews/:id/moderate — admin-only: show/hide a review without deleting it.
+const moderateReview = async (req, res, next) => {
+  try {
+    const review = await Review.findById(req.params.id);
+    if (!review) return sendError(res, 'Review not found', 404);
+
+    review.isActive = req.body.isActive;
+    await review.save();
+
+    return sendSuccess(res, { review }, review.isActive ? 'Review published' : 'Review hidden');
+  } catch (error) {
+    next(error);
+  }
+};
 
 // GET /api/reviews/product/:productId
 const getProductReviews = async (req, res, next) => {
@@ -90,4 +131,12 @@ const getMyReviews = async (req, res, next) => {
   }
 };
 
-module.exports = { getProductReviews, createReview, updateReview, deleteReview, getMyReviews };
+module.exports = {
+  getProductReviews,
+  getAllReviewsAdmin,
+  moderateReview,
+  createReview,
+  updateReview,
+  deleteReview,
+  getMyReviews,
+};

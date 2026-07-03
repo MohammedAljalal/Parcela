@@ -12,6 +12,7 @@ import {
   Image,
   Modal,
   ScrollView,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -186,6 +187,7 @@ export default function HomeScreen() {
   const [showIslandModal, setShowIslandModal] = useState(false);
   const [islands, setIslands] = useState([]);
   const [selectedIsland, setSelectedIsland] = useState(user?.island || 'Santiago (ST)');
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     dispatch(fetchProducts());
@@ -193,6 +195,21 @@ export default function HomeScreen() {
     dispatch(fetchCategories());
     dispatch(fetchWishlist());
     getIslands().then(res => setIslands(res.data?.data?.islands || [])).catch(console.error);
+  }, [dispatch]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        dispatch(fetchProducts()),
+        dispatch(fetchBanners()),
+        dispatch(fetchCategories()),
+        dispatch(fetchWishlist()),
+        getIslands().then(res => setIslands(res.data?.data?.islands || [])).catch(console.error),
+      ]);
+    } finally {
+      setRefreshing(false);
+    }
   }, [dispatch]);
 
   const handleRetry   = useCallback(() => dispatch(fetchProducts()), [dispatch]);
@@ -451,6 +468,14 @@ export default function HomeScreen() {
         contentContainerStyle={s.listContent}
         columnWrapperStyle={s.columnWrapper}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[C.primary]}
+            tintColor={C.primary}
+          />
+        }
       />
       
       {/* ── Island Picker Modal ── */}
