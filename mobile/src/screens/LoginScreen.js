@@ -63,11 +63,12 @@ const isValidPhone = (v) => v.replace(/\D/g, '').length >= 6;
 // ─── App Logo ──────────────────────────────────────────────────────────────────
 const AppLogo = React.memo(() => (
   <View style={s.logoBox} accessibilityRole="image" accessibilityLabel="Parcela logo">
-    <Image 
-      source={require('../../assets/images/icon.png')} 
-      style={s.logoImage} 
-      resizeMode="cover" 
-    />
+    <View style={s.boxIcon}>
+      <View style={s.boxLid} />
+      <View style={s.boxBody}>
+        <View style={s.boxStripe} />
+      </View>
+    </View>
   </View>
 ));
 AppLogo.displayName = 'AppLogo';
@@ -536,6 +537,10 @@ const s = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
+  boxIcon: { width: 36, height: 32, alignItems: 'center' },
+  boxLid: { width: 34, height: 10, backgroundColor: C.textOnPrimary, borderTopLeftRadius: 3, borderTopRightRadius: 3, marginBottom: 2, opacity: 0.9 },
+  boxBody: { width: 34, height: 20, backgroundColor: C.textOnPrimary, borderRadius: 3, alignItems: 'center', justifyContent: 'center', opacity: 0.9 },
+  boxStripe: { width: 14, height: 3, backgroundColor: C.primary, borderRadius: 2 },
   appName: {
     fontSize: 22, fontWeight: '700',
     color: C.textPrimary, letterSpacing: 0.2,

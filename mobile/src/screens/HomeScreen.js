@@ -229,7 +229,6 @@ export default function HomeScreen() {
         return id === productId;
       });
       await dispatch(toggleWishlist(productId)).unwrap();
-      toast.wishlist(!wasInWishlist);
     } catch (err) {
       toast.error(err?.message || err || 'Erro ao atualizar favorito');
     }

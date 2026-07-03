@@ -42,7 +42,6 @@ export default function WishlistScreen() {
   const handleRemove = async (productId) => {
     try {
       await dispatch(toggleWishlist(productId)).unwrap();
-      toast.info('Removido dos favoritos');
     } catch (err) {
       toast.error('Erro ao remover dos favoritos');
     }

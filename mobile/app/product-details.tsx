@@ -220,9 +220,8 @@ export default function ProductDetailsScreen() {
     try {
       const wasInWishlist = isFav;
       await dispatch(toggleWishlist(product._id)).unwrap();
-      toast.wishlist(!wasInWishlist);
     } catch (err) {
-      const msg = typeof err === 'string' ? err : err?.message ?? 'Erro ao atualizar favorito';
+      const msg = err?.message || err || 'Erro ao atualizar favorito';
       toast.error(msg);
     } finally {
       setFavLoading(false);

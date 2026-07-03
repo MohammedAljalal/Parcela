@@ -8,7 +8,9 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Image,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useDispatch, useSelector } from 'react-redux';
@@ -33,17 +35,35 @@ export default function EditProfileRoute() {
 
   const [name, setName] = useState(user?.name || '');
   const [phone, setPhone] = useState(user?.phone || '');
+  const [avatar, setAvatar] = useState(user?.avatar || '');
   
   // Set initial state if user data loads later
   useEffect(() => {
     if (user) {
       setName(user.name || '');
       setPhone(user.phone || '');
+      setAvatar(user.avatar || '');
     }
   }, [user]);
 
+  const handlePickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.5,
+      base64: true,
+    });
+
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      const asset = result.assets[0];
+      const base64Image = `data:image/jpeg;base64,${asset.base64}`;
+      setAvatar(base64Image);
+    }
+  };
+
   const handleSave = () => {
-    dispatch(updateProfile({ name, phone }))
+    dispatch(updateProfile({ name, phone, avatar }))
       .unwrap()
       .then(() => {
         router.back();
@@ -54,7 +74,7 @@ export default function EditProfileRoute() {
       });
   };
 
-  const isChanged = name !== (user?.name || '') || phone !== (user?.phone || '');
+  const isChanged = name !== (user?.name || '') || phone !== (user?.phone || '') || avatar !== (user?.avatar || '');
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -73,6 +93,23 @@ export default function EditProfileRoute() {
       >
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           
+          <View style={styles.avatarContainer}>
+            <TouchableOpacity onPress={handlePickImage} activeOpacity={0.8}>
+              <View style={styles.avatarWrapper}>
+                {avatar ? (
+                  <Image source={{ uri: avatar }} style={styles.avatarImage} />
+                ) : (
+                  <View style={[styles.avatarImage, styles.avatarPlaceholder]}>
+                    <Ionicons name="person" size={40} color={C.textSecondary} />
+                  </View>
+                )}
+                <View style={styles.editBadge}>
+                  <Ionicons name="camera" size={14} color="#FFF" />
+                </View>
+              </View>
+            </TouchableOpacity>
+          </View>
+
           <View style={styles.formCard}>
             <Input
               label="Nome Completo"
@@ -136,6 +173,44 @@ const styles = StyleSheet.create({
   },
   scroll: {
     padding: 16,
+  },
+  avatarContainer: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  avatarWrapper: {
+    position: 'relative',
+    padding: 4,
+    backgroundColor: C.surface,
+    borderRadius: 99,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  avatarImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+  },
+  avatarPlaceholder: {
+    backgroundColor: '#F0F4F8',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  editBadge: {
+    position: 'absolute',
+    bottom: 2,
+    right: 2,
+    backgroundColor: C.primary,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: C.surface,
   },
   formCard: {
     backgroundColor: C.surface,
