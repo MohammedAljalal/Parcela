@@ -70,7 +70,7 @@ function OrderDetailModal({ orderId, onClose }) {
         <p className="text-ink-soft text-sm py-8 text-center">Loading...</p>
       ) : (
         <div className="space-y-6">
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div>
               <h4 className="font-medium text-ink mb-2">Customer</h4>
               <p className="text-sm text-ink-soft">{order.user?.name}</p>

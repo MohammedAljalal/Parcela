@@ -130,7 +130,7 @@ export default function BannersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-3xl font-display font-bold text-ink">Banners</h1>
           <p className="text-ink-soft mt-1">Home screen promotional banners</p>
@@ -198,7 +198,7 @@ export default function BannersPage() {
           </>
         }
       >
-        <form onSubmit={(e) => handleSubmit(onSubmit)(e)} className="grid grid-cols-3 gap-6">
+        <form onSubmit={(e) => handleSubmit(onSubmit)(e)} className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="col-span-1">
             <Field label="Image" required={!editingBanner}>
               <div className="border-2 border-dashed border-border rounded-lg aspect-[4/3] flex items-center justify-center overflow-hidden bg-bg">

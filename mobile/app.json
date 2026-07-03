@@ -29,6 +29,14 @@
     "plugins": [
       "expo-router",
       [
+        "@stripe/stripe-react-native",
+        {
+          "merchantIdentifier": "merchant.com.parcela.app",
+          "enableGooglePay": true
+        }
+      ],
+      "expo-image-picker",
+      [
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-icon.png",

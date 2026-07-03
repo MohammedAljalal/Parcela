@@ -179,7 +179,7 @@ export default function CouponsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-3xl font-display font-bold text-ink">Coupons</h1>
           <p className="text-ink-soft mt-1">Promo codes and discounts</p>

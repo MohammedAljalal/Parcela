@@ -133,7 +133,7 @@ export default function UsersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-3xl font-display font-bold text-ink">Users</h1>
           <p className="text-ink-soft mt-1">Customers, vendors and admins</p>
@@ -143,7 +143,7 @@ export default function UsersPage() {
         </Button>
       </div>
 
-      <div className="bg-surface p-4 rounded-lg border border-border flex gap-4">
+      <div className="bg-surface p-4 rounded-lg border border-border flex flex-wrap gap-4">
         <div className="flex items-center gap-2 bg-bg px-4 py-2 rounded-lg max-w-xs flex-1">
           <FiSearch className="text-ink-faint" />
           <input

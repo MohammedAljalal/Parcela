@@ -152,7 +152,7 @@ export default function IslandsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-3xl font-display font-bold text-ink">Islands</h1>
           <p className="text-ink-soft mt-1">Delivery zones and shipping fees</p>
@@ -203,7 +203,7 @@ export default function IslandsPage() {
               <Input {...register('capital')} placeholder="Praia" />
             </Field>
           </div>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Field label="Delivery Fee (CVE)" error={errors.deliveryFee?.message}>
               <Input type="number" step="0.01" {...register('deliveryFee')} />
             </Field>

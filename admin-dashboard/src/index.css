@@ -226,6 +226,38 @@
 }
 .animate-in { animation: fadeInUp 0.28s ease both; }
 
+/* ── Responsive / Mobile ─────────────────────────────────── */
+
+/* Ensure tables scroll horizontally on small screens */
+.table-scroll-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Pagination wraps on very small screens */
+@media (max-width: 480px) {
+  .pagination-row {
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: flex-start;
+  }
+}
+
+/* Sidebar mobile drawer: always full width when open */
+@media (max-width: 767px) {
+  .sidebar {
+    width: 256px !important;
+    min-height: 100dvh;
+  }
+}
+
+/* Main content area – ensure padding is tighter on phones */
+@media (max-width: 640px) {
+  .card {
+    border-radius: 12px;
+  }
+}
+
 /* ── SweetAlert2 ────────────────────────────────────────── */
 .swal2-popup.parcela-swal {
   border-radius: 20px;

@@ -131,7 +131,7 @@ export default function UserDetailPage() {
         <FiArrowLeft /> Back to Users
       </button>
 
-      <div className="flex items-start justify-between">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 rounded-full bg-primary-500 text-white flex items-center justify-center font-display font-bold text-xl">
             {user.name?.substring(0, 2).toUpperCase()}
@@ -159,7 +159,7 @@ export default function UserDetailPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div className="bg-surface rounded-lg border border-border p-4">
           <p className="text-xs text-ink-soft">Orders</p>
           <p className="text-xl font-display font-bold">{stats.ordersCount}</p>
@@ -196,7 +196,7 @@ export default function UserDetailPage() {
       </div>
 
       {activeTab === 'Overview' && (
-        <div className="grid grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="bg-surface rounded-lg border border-border p-6">
             <h3 className="font-display font-bold mb-4">Account Info</h3>
             <form onSubmit={handleSubmit(onSubmitInfo)} key={user._id}>
@@ -263,7 +263,7 @@ export default function UserDetailPage() {
       )}
 
       {activeTab === 'Addresses' && (
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {!addresses ? (
             <p className="text-ink-soft text-sm">Loading...</p>
           ) : addresses.length === 0 ? (

@@ -227,7 +227,7 @@ export default function DataTable({
       </div>
 
       {/* Pagination */}
-      <div className="flex items-center justify-between px-1">
+      <div className="pagination-row flex items-center justify-between gap-3 px-1">
         <p className="text-xs" style={{ color: '#9CA3AF' }}>
           Showing <span style={{ color: '#0D1B2A', fontWeight: 600 }}>{from}–{to}</span> of{' '}
           <span style={{ color: '#0D1B2A', fontWeight: 600 }}>{data.length}</span> records

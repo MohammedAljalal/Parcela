@@ -11,6 +11,7 @@ import {
   FiImage,
   FiLock,
   FiChevronRight,
+  FiX,
 } from 'react-icons/fi';
 
 const menuItems = [
@@ -26,7 +27,7 @@ const menuItems = [
   { label: 'Security',    href: '/security',   icon: FiLock },
 ];
 
-export default function Sidebar({ isOpen }) {
+export default function Sidebar({ isOpen, onClose }) {
   const location = useLocation();
 
   return (
@@ -34,7 +35,7 @@ export default function Sidebar({ isOpen }) {
       className={`sidebar flex flex-col transition-all duration-300 ${
         isOpen ? 'w-64' : 'w-[72px]'
       }`}
-      style={{ minHeight: '100vh' }}
+      style={{ minHeight: '100vh', width: isOpen ? 256 : 72 }}
     >
       {/* Logo */}
       <div
@@ -45,7 +46,7 @@ export default function Sidebar({ isOpen }) {
           <img src="/logo.svg" alt="Parcela Logo" className="w-full h-full object-contain" />
         </div>
         {isOpen && (
-          <div>
+          <div className="flex-1 min-w-0">
             <h1 className="font-display font-bold text-white text-lg leading-none">
               Parcela
             </h1>
@@ -53,6 +54,16 @@ export default function Sidebar({ isOpen }) {
               Admin Panel
             </p>
           </div>
+        )}
+        {/* Close button – mobile only */}
+        {isOpen && onClose && (
+          <button
+            onClick={onClose}
+            className="md:hidden ml-auto flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center"
+            style={{ color: '#8BAAD6', background: 'rgba(255,255,255,0.08)' }}
+          >
+            <FiX style={{ width: 15, height: 15 }} />
+          </button>
         )}
       </div>
 
@@ -77,6 +88,7 @@ export default function Sidebar({ isOpen }) {
               key={item.href}
               to={item.href}
               title={!isOpen ? item.label : undefined}
+              onClick={onClose}
               className={`sidebar-link flex items-center gap-3 px-3 py-2.5 ${
                 isActive ? 'active' : ''
               } ${!isOpen ? 'justify-center' : ''}`}
