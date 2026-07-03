@@ -111,7 +111,7 @@ const getProductName = (p) =>
   p?.name?.pt || p?.name?.en || (typeof p?.name === 'string' ? p.name : '') || 'Produto';
 
 // ─── Product Card ─────────────────────────────────────────────────────────────
-const ProductCard = React.memo(({ product, onPress, onAddToCart, isFav, onToggleWishlist }) => {
+const ProductCard = React.memo(({ product, onPress, onAddToCart, isFav, favLoading, onToggleWishlist }) => {
   const imgUrl    = getProductImage(product);
   const isPromo   = !!product?.isPromoted;
   const name      = getProductName(product);
@@ -140,15 +140,20 @@ const ProductCard = React.memo(({ product, onPress, onAddToCart, isFav, onToggle
 
         {/* Heart button — connected to real Wishlist API */}
         <TouchableOpacity
-          style={s.heartBtn}
-          onPress={() => onToggleWishlist?.(product._id)}
+          style={[s.heartBtn, isFav && s.heartBtnActive]}
+          onPress={() => !favLoading && onToggleWishlist?.(product._id)}
           hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+          activeOpacity={0.7}
         >
-          <Ionicons
-            name={isFav ? 'heart' : 'heart-outline'}
-            size={15}
-            color={isFav ? C.danger : '#BBBBBB'}
-          />
+          {favLoading ? (
+            <ActivityIndicator size={12} color={C.danger} />
+          ) : (
+            <Ionicons
+              name={isFav ? 'heart' : 'heart-outline'}
+              size={17}
+              color={isFav ? C.danger : '#BBBBBB'}
+            />
+          )}
         </TouchableOpacity>
       </View>
 
@@ -221,16 +226,16 @@ export default function HomeScreen() {
     }
   }, [dispatch]);
 
-  const handleToggleWishlist = useCallback(async (productId, product) => {
+  const [favLoadingMap, setFavLoadingMap] = useState({});
+
+  const handleToggleWishlist = useCallback(async (productId) => {
+    setFavLoadingMap((prev) => ({ ...prev, [productId]: true }));
     try {
-      const { items } = store.getState().wishlist;
-      const wasInWishlist = items.some((item) => {
-        const id = item.product?._id ?? item.product ?? item._id;
-        return id === productId;
-      });
       await dispatch(toggleWishlist(productId)).unwrap();
     } catch (err) {
       toast.error(err?.message || err || 'Erro ao atualizar favorito');
+    } finally {
+      setFavLoadingMap((prev) => ({ ...prev, [productId]: false }));
     }
   }, [dispatch]);
 
@@ -253,11 +258,12 @@ export default function HomeScreen() {
           onPress={() => handleProduct(item)}
           onAddToCart={() => handleAddCart(item)}
           isFav={wishlistIds.includes(item._id)}
+          favLoading={!!favLoadingMap[item._id]}
           onToggleWishlist={handleToggleWishlist}
         />
       </View>
     ),
-    [handleProduct, handleAddCart, handleToggleWishlist, wishlistIds]
+    [handleProduct, handleAddCart, handleToggleWishlist, wishlistIds, favLoadingMap]
   );
 
   // ── List Header (memoised to prevent FlatList scroll-jump) ─────────────
@@ -447,6 +453,7 @@ export default function HomeScreen() {
         data={!loading && !error ? filtered : []}
         keyExtractor={(item) => item._id?.toString() ?? String(Math.random())}
         renderItem={renderItem}
+        extraData={wishlistIds}
         numColumns={2}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[C.primary]} tintColor={C.primary} />
@@ -792,6 +799,9 @@ const s = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 3,
     elevation: 2,
+  },
+  heartBtnActive: {
+    backgroundColor: 'rgba(255, 235, 238, 0.97)',
   },
   cardBody: {
     padding: CARD_PAD,

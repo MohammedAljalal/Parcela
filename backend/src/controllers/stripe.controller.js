@@ -46,8 +46,8 @@ const createCheckoutSession = async (req, res, next) => {
         },
       ],
       mode: 'payment',
-      success_url: `${env.CLIENT_URL}/orders?success=true`,
-      cancel_url: `${env.CLIENT_URL}/checkout?cancelled=true`,
+      success_url: `parcela://payment-result?status=success&orderId=${order._id}`,
+      cancel_url: `parcela://payment-result?status=cancel&orderId=${order._id}`,
       metadata: {
         orderId: order._id.toString(),
         userId: req.user._id.toString(),

@@ -13,6 +13,7 @@ import {
   Pressable,
   Linking,
 } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from 'expo-router';
@@ -138,7 +139,6 @@ export default function CheckoutScreen() {
   const handleConfirm = useCallback(async () => {
     if (!selectedAddress) {
       toast.error('Adiciona um endereço de entrega primeiro.', 'Endereço obrigatório');
-      // Navigate directly to add-address screen
       setTimeout(() => router.push('/add-address'), 600);
       return;
     }
@@ -158,31 +158,54 @@ export default function CheckoutScreen() {
       })).unwrap();
 
       if (paymentMethod === 'card') {
-        // Fetch checkout session from backend
-        const intentRes = await apiClient.post('/stripe/checkout', { orderId: orderData.order._id });
+        // ── Stripe Checkout ─────────────────────────────────────────────────
+        const intentRes = await apiClient.post('/stripe/checkout', {
+          orderId: orderData.order._id,
+        });
         const { url } = intentRes.data.data;
 
-        // Open the Stripe hosted checkout page
-        await Linking.openURL(url);
-      } else if (paymentMethod === 'vinti4') {
-        // Backend hosts SISP's auto-submit payment form at this URL —
-        // opening it in the system browser lets the shopper enter their
-        // card details directly on SISP's own (PCI-compliant) page.
-        const paymentRes = await apiClient.post('/payments/initiate', { orderId: orderData.order._id });
-        const { paymentUrl } = paymentRes.data.data;
+        // Open Stripe hosted checkout in an in-app browser session.
+        // When Stripe redirects to our success/cancel deep-link
+        // (parcela://...) the session closes automatically.
+        const result = await WebBrowser.openAuthSessionAsync(
+          url,
+          'parcela://payment-result'
+        );
 
+        if (result.type === 'success') {
+          // Deep link came back — payment succeeded
+          dispatch(resetCart());
+          toast.success('Pagamento concluído com sucesso!', '✓ Pago!');
+          setTimeout(() => router.replace('/(tabs)/orders'), 1200);
+          return;
+        } else if (result.type === 'cancel') {
+          // User closed the browser without paying
+          toast.error('Pagamento cancelado.', 'Cancelado');
+          return;
+        }
+        // Dismissed without known result — order was created; user can retry payment
+        dispatch(resetCart());
+        toast.success('Encomenda criada. Completa o pagamento a partir dos teus pedidos.', '✓ Criada!');
+        setTimeout(() => router.replace('/(tabs)/orders'), 1500);
+        return;
+
+      } else if (paymentMethod === 'vinti4') {
+        const paymentRes = await apiClient.post('/payments/initiate', {
+          orderId: orderData.order._id,
+        });
+        const { paymentUrl } = paymentRes.data.data;
         await Linking.openURL(paymentUrl);
       }
 
-      // Clear cart state after successful order
+      // ── Cash / Vinti4 success ────────────────────────────────────────────
       dispatch(resetCart());
-
       toast.success('A tua encomenda foi criada com sucesso.', '✓ Confirmada!');
-      setTimeout(() => {
-        router.replace('/(tabs)/orders');
-      }, 1500);
+      setTimeout(() => router.replace('/(tabs)/orders'), 1500);
+
     } catch (err) {
-      const msg = typeof err === 'string' ? err : (err?.message ?? 'Falha ao criar encomenda. Tente novamente.');
+      const msg = typeof err === 'string'
+        ? err
+        : (err?.message ?? 'Falha ao criar encomenda. Tente novamente.');
       toast.error(msg, 'Erro no Pagamento');
     }
   }, [dispatch, router, selectedAddress, selectedIsland, paymentMethod]);
@@ -355,8 +378,8 @@ export default function CheckoutScreen() {
               <MaterialCommunityIcons name="credit-card-outline" size={22} color={paymentMethod === 'card' ? '#FFF' : C.primary} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.paymentTitle}>Cartão de Crédito</Text>
-              <Text style={styles.paymentSubtitle}>Pague agora com segurança</Text>
+              <Text style={styles.paymentTitle}>Cartão de Crédito / Débito</Text>
+              <Text style={styles.paymentSubtitle}>Visa, Mastercard · Pague via Stripe 🔒</Text>
             </View>
             {paymentMethod === 'card' && <Ionicons name="checkmark-circle" size={22} color={C.primary} />}
           </TouchableOpacity>
