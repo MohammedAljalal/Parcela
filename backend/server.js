@@ -33,6 +33,7 @@ const stripeRoutes = require('./src/routes/stripe.routes.js');
 const adminRoutes = require('./src/routes/admin.routes.js');
 
 const app = express();
+app.set('trust proxy', 1);
 
 connectDB();
 
