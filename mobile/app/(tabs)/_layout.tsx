@@ -3,16 +3,11 @@ import { View, Text } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSelector } from 'react-redux';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTranslation } from 'react-i18next';
 import colors from '../../src/theme/colors';
 
 export default function TabLayout() {
-  const { t } = useTranslation();
   // Read live cart count from Redux so badge updates in real-time
   const cartItemCount = useSelector((state) => state.cart?.itemCount ?? 0);
-  // Bottom inset accounts for the phone's gesture/navigation bar
-  const { bottom } = useSafeAreaInsets();
 
   return (
     <Tabs
@@ -24,8 +19,8 @@ export default function TabLayout() {
           backgroundColor: '#FFFFFF',
           borderTopWidth: 1,
           borderTopColor: '#E5E5E5',
-          height: 70 + bottom,
-          paddingBottom: 12 + bottom,
+          height: 85,
+          paddingBottom: 25,
           paddingTop: 8,
           shadowColor: '#000',
           shadowOffset: { width: 0, height: -2 },
@@ -96,31 +91,31 @@ export default function TabLayout() {
       <Tabs.Screen
         name="home"
         options={{
-          title: t('tabs.home'),
+          title: 'Home',
         }}
       />
       <Tabs.Screen
         name="categories"
         options={{
-          title: t('tabs.categories'),
+          title: 'Categorias',
         }}
       />
       <Tabs.Screen
         name="cart"
         options={{
-          title: t('tabs.cart'),
+          title: 'Carrinho',
         }}
       />
       <Tabs.Screen
         name="orders"
         options={{
-          title: t('tabs.orders'),
+          title: 'Encomendas',
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: t('tabs.profile'),
+          title: 'Perfil',
         }}
       />
     </Tabs>

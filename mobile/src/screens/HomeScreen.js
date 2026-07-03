@@ -197,22 +197,16 @@ export default function HomeScreen() {
     getIslands().then(res => setIslands(res.data?.data?.islands || [])).catch(console.error);
   }, [dispatch]);
 
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    try {
-      await Promise.all([
-        dispatch(fetchProducts()),
-        dispatch(fetchBanners()),
-        dispatch(fetchCategories()),
-        dispatch(fetchWishlist()),
-        getIslands().then(res => setIslands(res.data?.data?.islands || [])).catch(console.error),
-      ]);
-    } finally {
-      setRefreshing(false);
-    }
-  }, [dispatch]);
-
   const handleRetry   = useCallback(() => dispatch(fetchProducts()), [dispatch]);
+  const onRefresh     = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([
+      dispatch(fetchProducts()),
+      dispatch(fetchBanners()),
+      dispatch(fetchCategories())
+    ]);
+    setRefreshing(false);
+  }, [dispatch]);
   const handleLogout  = useCallback(() => { dispatch(logout()); router.replace('/'); }, [dispatch, router]);
   const handleProduct = useCallback(
     (p) => router.push({ pathname: '/product-details', params: { id: p._id, slug: p.slug } }),
@@ -455,6 +449,9 @@ export default function HomeScreen() {
         keyExtractor={(item) => item._id?.toString() ?? String(Math.random())}
         renderItem={renderItem}
         numColumns={2}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[C.primary]} tintColor={C.primary} />
+        }
         ListHeaderComponent={ListHeader}
         ListFooterComponent={ListFooter}
         ListEmptyComponent={
@@ -468,14 +465,6 @@ export default function HomeScreen() {
         contentContainerStyle={s.listContent}
         columnWrapperStyle={s.columnWrapper}
         showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={[C.primary]}
-            tintColor={C.primary}
-          />
-        }
       />
       
       {/* ── Island Picker Modal ── */}

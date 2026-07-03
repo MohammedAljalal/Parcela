@@ -13,7 +13,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useDispatch, useSelector } from 'react-redux';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useTranslation } from 'react-i18next';
 import { logout } from '../store/slices/authSlice';
 
 // ─── Design Tokens ────────────────────────────────────────────────────────────
@@ -35,14 +34,13 @@ const C = {
 const ProfileScreen = () => {
   const router = useRouter();
   const dispatch = useDispatch();
-  const { t } = useTranslation();
   const { user } = useSelector((state) => state.auth);
 
   // Fallback data
   const initials = user?.initials ?? '??';
   const name = user?.name ?? 'Utilizador';
-  const phone = user?.phone ?? t('profile.notDefined');
-  const role = user?.role === 'admin' ? t('profile.admin') : t('profile.customer');
+  const phone = user?.phone ?? 'Não definido';
+  const role = user?.role === 'admin' ? 'ADMIN' : 'CUSTOMER';
   const avatar = user?.avatar; // URL to avatar image if exists
 
   const handleLogout = () => {
@@ -95,7 +93,7 @@ const ProfileScreen = () => {
             <Ionicons name="person-outline" size={18} color={C.primary} />
           </View>
           <View style={styles.cardContent}>
-            <Text style={styles.cardLabel}>{t('profile.personalData')}</Text>
+            <Text style={styles.cardLabel}>Dados Pessoais</Text>
             <Text style={styles.cardValue} numberOfLines={1}>{name} • {phone}</Text>
           </View>
           <Ionicons name="chevron-forward" size={16} color={C.textMuted} />
@@ -106,8 +104,8 @@ const ProfileScreen = () => {
             <Ionicons name="location-outline" size={18} color={C.primary} />
           </View>
           <View style={styles.cardContent}>
-            <Text style={styles.cardLabel}>{t('profile.deliveryAddress')}</Text>
-            <Text style={styles.cardValue} numberOfLines={1}>{t('profile.notDefined')}</Text>
+            <Text style={styles.cardLabel}>Endereço de Entrega</Text>
+            <Text style={styles.cardValue} numberOfLines={1}>Não definido</Text>
           </View>
           <Ionicons name="chevron-forward" size={16} color={C.textMuted} />
         </TouchableOpacity>
@@ -119,7 +117,7 @@ const ProfileScreen = () => {
             <View style={styles.cardIconBox}>
               <Ionicons name="language-outline" size={18} color={C.primary} />
             </View>
-            <Text style={styles.groupItemText}>{t('profile.language')}</Text>
+            <Text style={styles.groupItemText}>Idioma</Text>
             <View style={styles.languageBadge}>
               <Text style={styles.languageBadgeText}>PT</Text>
             </View>
@@ -132,7 +130,7 @@ const ProfileScreen = () => {
             <View style={styles.cardIconBox}>
               <Ionicons name="notifications-outline" size={18} color={C.primary} />
             </View>
-            <Text style={styles.groupItemText}>{t('profile.notifications')}</Text>
+            <Text style={styles.groupItemText}>Notificações</Text>
             <Switch
               value={true}
               onValueChange={() => {}}
@@ -148,7 +146,7 @@ const ProfileScreen = () => {
             <View style={styles.cardIconBox}>
               <Ionicons name="document-text-outline" size={18} color={C.primary} />
             </View>
-            <Text style={styles.groupItemText}>{t('profile.termsOfUse')}</Text>
+            <Text style={styles.groupItemText}>Termos de Uso</Text>
             <Ionicons name="open-outline" size={16} color={C.textMuted} />
           </TouchableOpacity>
 
@@ -157,13 +155,13 @@ const ProfileScreen = () => {
         {/* ── Logout Button ─────────────────────────────────────────────────── */}
         <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout} activeOpacity={0.8}>
           <Ionicons name="log-out-outline" size={18} color={C.danger} />
-          <Text style={styles.logoutBtnText}>{t('profile.logout')}</Text>
+          <Text style={styles.logoutBtnText}>Sair da Conta</Text>
         </TouchableOpacity>
 
         {/* ── Footer ────────────────────────────────────────────────────────── */}
         <View style={styles.footerInfo}>
           <Text style={styles.footerVersion}>Parcela Mobile v2.4.0-ocean</Text>
-          <Text style={styles.footerTagline}>{t('profile.tagline')}</Text>
+          <Text style={styles.footerTagline}>Conectando as Ilhas com Confiança</Text>
         </View>
 
         {/* Spacer */}

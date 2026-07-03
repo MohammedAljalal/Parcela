@@ -19,6 +19,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
+import * as AuthSession from 'expo-auth-session';
 import { useEffect } from 'react';
 import CountryPickerModal from '../components/CountryPickerModal';
 
@@ -292,11 +293,19 @@ const LoginScreen = () => {
   const isBusy = activeTab === 'phone' ? loadingOtp : loading;
 
   // ── Google Auth ──
+  // Force auth.expo.io proxy — required for Expo Go (local IP exp:// doesn't work with Google)
+  const redirectUri = AuthSession.makeRedirectUri({
+    useProxy: true,
+    projectNameForProxy: '@Mohammedaljalal/mobile',
+  });
+
   const [request, response, promptAsync] = Google.useAuthRequest({
-    expoClientId:   process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_EXPO || '623297773074-6n0m3e5qhrfgsegcq90ejr2s9r686621.apps.googleusercontent.com',
-    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID || undefined,
+    clientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_EXPO || '623297773074-6n0m3e5qhrfgsegcq90ejr2s9r686621.apps.googleusercontent.com',
+    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID || '623297773074-sng1u3jfum669euff4be4cb284d13ag1.apps.googleusercontent.com',
     iosClientId:    process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS || undefined,
     webClientId:    process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB || '623297773074-6n0m3e5qhrfgsegcq90ejr2s9r686621.apps.googleusercontent.com',
+    scopes: ['openid', 'profile', 'email'],
+    redirectUri,
   });
 
   useEffect(() => {
@@ -372,7 +381,7 @@ const LoginScreen = () => {
 
   const handleGoogle = useCallback(() => {
     dispatch(clearError());
-    promptAsync();
+    promptAsync({ useProxy: true });
   }, [dispatch, promptAsync]);
 
   // ── CTA disabled? ──

@@ -44,19 +44,25 @@ function AuthWrapper() {
   useEffect(() => {
     if (!isInitialized || !isAppInitialized || !isMounted.current) return;
 
-    const inTabsGroup = segments[0] === '(tabs)';
+    const currentRoute = segments[0] ?? 'index';
+    const isOnPublicRoute = PUBLIC_ROUTES.includes(currentRoute);
 
-    if (user && !inTabsGroup) {
-      // Defer slightly to ensure the layout has mounted
-      setTimeout(() => router.replace('/(tabs)/home'), 1);
-    } else if (!user && inTabsGroup) {
-      setTimeout(() => router.replace('/'), 1);
+    if (user && isOnPublicRoute) {
+      router.replace('/(tabs)/home');
+    } else if (!user && !isOnPublicRoute) {
+      router.replace('/');
     }
-  }, [user, isInitialized, isAppInitialized, segments]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, isInitialized, isAppInitialized]);
 
-  // Expo Router requires a Navigator to always be rendered.
-  // Returning an ActivityIndicator directly causes "Attempted to navigate before mounting"
-  // Since app/index.tsx renders a SplashScreen, we can just return Stack safely.
+  if (!isInitialized || !isAppInitialized) {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F5F5F5' }}>
+        <ActivityIndicator size="large" color="#1A237E" />
+      </View>
+    );
+  }
+
   return <Stack screenOptions={{ headerShown: false }} />;
 }
 

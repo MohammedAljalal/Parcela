@@ -421,7 +421,7 @@ const seedDB = async () => {
       user: customer._id,
       title: { pt: 'Pedido entregue', en: 'Order delivered' },
       body: { pt: `O seu pedido ${deliveredOrder.orderNumber} foi entregue.` },
-      type: 'order_delivered',
+      type: 'order_update',
       data: { orderId: deliveredOrder._id.toString() },
     });
     console.log('Seeded notifications');

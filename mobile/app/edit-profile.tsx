@@ -8,14 +8,11 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
-  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useDispatch, useSelector } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
-import { useTranslation } from 'react-i18next';
 import { updateProfile } from '../src/store/slices/authSlice';
 import Input from '../src/components/Input';
 import Button from '../src/components/Button';
@@ -32,12 +29,10 @@ const C = {
 export default function EditProfileRoute() {
   const router = useRouter();
   const dispatch = useDispatch();
-  const { t } = useTranslation();
   const { user, loading } = useSelector((state) => state.auth);
 
   const [name, setName] = useState(user?.name || '');
   const [phone, setPhone] = useState(user?.phone || '');
-  const [localAvatar, setLocalAvatar] = useState(null);
   
   // Set initial state if user data loads later
   useEffect(() => {
@@ -47,53 +42,19 @@ export default function EditProfileRoute() {
     }
   }, [user]);
 
-  const handlePickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.5,
-    });
-
-    if (!result.canceled && result.assets && result.assets.length > 0) {
-      setLocalAvatar(result.assets[0].uri);
-    }
-  };
-
   const handleSave = () => {
-    let payload;
-    
-    if (localAvatar) {
-      payload = new FormData();
-      payload.append('name', name);
-      // Phone is not editable here as it requires OTP
-      
-      const filename = localAvatar.split('/').pop() || 'avatar.jpg';
-      const match = /\.(\w+)$/.exec(filename);
-      const type = match ? `image/${match[1]}` : 'image/jpeg';
-      
-      payload.append('avatar', {
-        uri: localAvatar,
-        name: filename,
-        type,
-      });
-    } else {
-      payload = { name };
-    }
-
-    dispatch(updateProfile(payload))
+    dispatch(updateProfile({ name, phone }))
       .unwrap()
       .then(() => {
         router.back();
       })
       .catch((err) => {
+        // Handle error (already in state.error)
         console.error(err);
       });
   };
 
-  const isChanged = name !== (user?.name || '') || localAvatar !== null;
-
-  const currentAvatar = localAvatar || user?.avatar;
+  const isChanged = name !== (user?.name || '') || phone !== (user?.phone || '');
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -113,24 +74,8 @@ export default function EditProfileRoute() {
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           
           <View style={styles.formCard}>
-            {/* ── Avatar Picker ── */}
-            <View style={styles.avatarSection}>
-              <View style={styles.avatarWrapper}>
-                {currentAvatar ? (
-                  <Image source={{ uri: currentAvatar }} style={styles.avatarImg} />
-                ) : (
-                  <View style={[styles.avatarImg, styles.avatarPlaceholder]}>
-                    <Ionicons name="person" size={40} color={C.textMuted} />
-                  </View>
-                )}
-                <TouchableOpacity style={styles.editBadge} onPress={handlePickImage} activeOpacity={0.8}>
-                  <Ionicons name="camera" size={14} color="#FFF" />
-                </TouchableOpacity>
-              </View>
-            </View>
-
             <Input
-              label={t('register.fullName') || "Nome Completo"}
+              label="Nome Completo"
               value={name}
               onChangeText={setName}
               placeholder="Seu nome"
@@ -140,14 +85,13 @@ export default function EditProfileRoute() {
             <View style={{ height: 16 }} />
 
             <Input
-              label={(t('register.phoneLabel') || "Número de Telefone") + " (Apenas leitura)"}
+              label="Número de Telefone"
               value={phone}
               onChangeText={setPhone}
               placeholder="+238 000 00 00"
               keyboardType="phone-pad"
-              editable={false}
+              editable={!loading}
             />
-            <Text style={styles.phoneHint}>Para alterar o telefone, entre em contato com o suporte.</Text>
           </View>
 
         </ScrollView>
@@ -193,39 +137,6 @@ const styles = StyleSheet.create({
   scroll: {
     padding: 16,
   },
-  avatarSection: {
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  avatarWrapper: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: '#F3F4F6',
-    position: 'relative',
-  },
-  avatarImg: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-  },
-  avatarPlaceholder: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  editBadge: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: C.primary,
-    borderWidth: 3,
-    borderColor: C.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   formCard: {
     backgroundColor: C.surface,
     padding: 20,
@@ -242,11 +153,5 @@ const styles = StyleSheet.create({
     backgroundColor: C.surface,
     borderTopWidth: 1,
     borderTopColor: C.border,
-  },
-  phoneHint: {
-    fontSize: 12,
-    color: C.textMuted,
-    marginTop: 6,
-    marginLeft: 4,
   },
 });

@@ -12,9 +12,9 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useDispatch, useSelector } from 'react-redux';
-import { useTranslation } from 'react-i18next';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
+import * as AuthSession from 'expo-auth-session';
 import CountryPickerModal from '../components/CountryPickerModal';
 
 import { registerUser, loginWithGoogle, clearError, sendOtp } from '../store/slices/authSlice';
@@ -59,22 +59,22 @@ const GoogleIcon = () => (
 const RegisterScreen = () => {
   const router = useRouter();
   const dispatch = useDispatch();
-  const { t } = useTranslation();
 
   const { loading, error } = useSelector((state) => state.auth);
 
-  // Recreate TABS dynamically so they update when language changes
-  const TABS = [
-    { key: 'phone', label: t('register.tabPhone') },
-    { key: 'email', label: t('register.tabEmail') },
-  ];
-
   // Google Auth Session (same client IDs as LoginScreen)
+  const redirectUri = AuthSession.makeRedirectUri({
+    useProxy: true,
+    projectNameForProxy: '@Mohammedaljalal/mobile',
+  });
+
   const [request, response, promptAsync] = Google.useAuthRequest({
-    expoClientId: '623297773074-6n0m3e5qhrfgsegcq90ejr2s9r686621.apps.googleusercontent.com',
-    androidClientId: '623297773074-6n0m3e5qhrfgsegcq90ejr2s9r686621.apps.googleusercontent.com',
-    iosClientId: '623297773074-6n0m3e5qhrfgsegcq90ejr2s9r686621.apps.googleusercontent.com',
-    webClientId: '623297773074-6n0m3e5qhrfgsegcq90ejr2s9r686621.apps.googleusercontent.com',
+    clientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_EXPO || '623297773074-6n0m3e5qhrfgsegcq90ejr2s9r686621.apps.googleusercontent.com',
+    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID || '623297773074-sng1u3jfum669euff4be4cb284d13ag1.apps.googleusercontent.com',
+    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS || undefined,
+    webClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB || '623297773074-6n0m3e5qhrfgsegcq90ejr2s9r686621.apps.googleusercontent.com',
+    scopes: ['openid', 'profile', 'email'],
+    redirectUri,
   });
 
   // Handle Google auth response
@@ -88,9 +88,9 @@ const RegisterScreen = () => {
         console.log('[Google/Register] Auth success — dispatching loginWithGoogle');
         dispatch(loginWithGoogle(token))
           .unwrap()
-          .then(() => toast.success(t('register.successMessage'), t('register.successTitle')))
+          .then(() => toast.success('Conta criada!', 'Bem-vindo'))
           .catch((err) => {
-            toast.error(typeof err === 'string' ? err : t('register.errorGoogle'), 'Erro Google');
+            toast.error(typeof err === 'string' ? err : 'Falha ao autenticar', 'Erro Google');
           });
       } else {
         console.error('[Google/Register] No token in response:', authentication);
@@ -133,19 +133,19 @@ const RegisterScreen = () => {
       dispatch(sendOtp(fullPhone))
         .unwrap()
         .then(() => {
-          toast.info(`${t('register.codeSentTo')} ${fullPhone}`);
+          toast.info(`Código enviado para ${fullPhone}`);
           router.push({ pathname: '/otp-verify', params: { phone: fullPhone, prefilledName: name } });
         })
         .catch((err) => {
-          toast.error(typeof err === 'string' ? err : t('register.errorSendCode'), 'Erro');
+          toast.error(typeof err === 'string' ? err : 'Falha ao enviar código', 'Erro');
         });
     } else {
       const credentials = { type: 'email', name, email, password };
       dispatch(registerUser(credentials))
         .unwrap()
-        .then(() => toast.success(t('register.successMessage'), t('register.successTitle')))
+        .then(() => toast.success('Conta criada com sucesso!', 'Bem-vindo'))
         .catch((err) => {
-          toast.error(typeof err === 'string' ? err : t('register.errorGeneric'), 'Erro');
+          toast.error(typeof err === 'string' ? err : 'Falha ao criar conta', 'Erro');
         });
     }
   };
@@ -153,7 +153,7 @@ const RegisterScreen = () => {
   const handleGoogle = () => {
     dispatch(clearError());
     console.log('[Google/Register] Initiating auth flow...');
-    promptAsync();
+    promptAsync({ useProxy: true });
   };
 
   return (
@@ -172,8 +172,8 @@ const RegisterScreen = () => {
           {/* ── Hero ── */}
           <View style={styles.hero}>
             <AppLogo />
-            <Text style={styles.appName}>{t('register.title')}</Text>
-            <Text style={styles.tagline}>{t('register.tagline')}</Text>
+            <Text style={styles.appName}>Criar Conta</Text>
+            <Text style={styles.tagline}>Junte-se à Parcela hoje.</Text>
           </View>
 
           {/* ── Card ── */}
@@ -192,10 +192,10 @@ const RegisterScreen = () => {
 
             {/* ── Common Name Input ── */}
             <Input
-              label={t('register.fullName')}
+              label="Nome Completo"
               value={name}
               onChangeText={setName}
-              placeholder={t('register.namePlaceholder')}
+              placeholder="Seu nome"
               editable={!loading}
             />
 
@@ -203,7 +203,7 @@ const RegisterScreen = () => {
             {activeTab === 'phone' && (
               <View>
                 <Input
-                  label={t('register.phoneLabel')}
+                  label="Número de Telefone"
                   value={phone}
                   onChangeText={setPhone}
                   placeholder="000 00 00"
@@ -230,16 +230,16 @@ const RegisterScreen = () => {
             {activeTab === 'email' && (
               <View>
                 <Input
-                  label={t('register.emailLabel')}
+                  label="Email"
                   value={email}
                   onChangeText={setEmail}
-                  placeholder={t('register.emailPlaceholder')}
+                  placeholder="seuemail@exemplo.com"
                   keyboardType="email-address"
                   autoCapitalize="none"
                   editable={!loading}
                 />
                 <Input
-                  label={t('register.passwordLabel')}
+                  label="Palavra-passe"
                   value={password}
                   onChangeText={setPassword}
                   placeholder="••••••••"
@@ -251,7 +251,7 @@ const RegisterScreen = () => {
 
             {/* ── Primary CTA ── */}
             <Button
-              label={t('register.createAccount')}
+              label="Criar Conta"
               onPress={handleRegister}
               disabled={!canContinue || loading}
               loading={loading}
@@ -260,7 +260,7 @@ const RegisterScreen = () => {
             {/* ── Divider ── */}
             <View style={styles.dividerRow}>
               <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>{t('register.or')}</Text>
+              <Text style={styles.dividerText}>OU</Text>
               <View style={styles.dividerLine} />
             </View>
 
@@ -272,14 +272,14 @@ const RegisterScreen = () => {
               disabled={loading || !request}
             >
               <GoogleIcon />
-              <Text style={styles.googleLabel}>{t('register.continueWithGoogle')}</Text>
+              <Text style={styles.googleLabel}>Continuar com Google</Text>
             </TouchableOpacity>
 
             {/* ── Login link ── */}
             <View style={styles.signupRow}>
-              <Text style={styles.signupText}>{t('register.alreadyHaveAccount')}</Text>
+              <Text style={styles.signupText}>Já tem uma conta? </Text>
               <TouchableOpacity activeOpacity={0.7} disabled={loading} onPress={() => router.replace('/login')}>
-                <Text style={styles.signupLink}>{t('register.signIn')}</Text>
+                <Text style={styles.signupLink}>Entrar</Text>
               </TouchableOpacity>
             </View>
           </View>

@@ -1,7 +1,8 @@
 {
   "expo": {
-    "name": "mobile",
+    "name": "Parcela",
     "slug": "mobile",
+    "owner": "Mohammedaljalal",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -12,7 +13,6 @@
       "supportsTablet": true
     },
     "android": {
-      "package": "com.parcela.app",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -28,14 +28,6 @@
     },
     "plugins": [
       "expo-router",
-      [
-        "@stripe/stripe-react-native",
-        {
-          "merchantIdentifier": "merchant.com.parcela.app",
-          "enableGooglePay": true
-        }
-      ],
-      "expo-image-picker",
       [
         "expo-splash-screen",
         {
@@ -54,12 +46,6 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    },
-    "extra": {
-      "router": {},
-      "eas": {
-        "projectId": "f6734a10-761f-41b4-bb02-a3867bc9a0a8"
-      }
     }
   }
 }

@@ -10,7 +10,6 @@ const { sendOtpSms } = require('../lib/smsProvider');
 const generateOtp = require('../utils/generateOtp');
 const { OTP } = require('../config/constants');
 const env = require('../config/env');
-const { uploadImage, deleteImage } = require('../lib/cloudinary');
 
 const googleClient = new OAuth2Client(env.GOOGLE_CLIENT_ID);
 
@@ -234,26 +233,8 @@ const updateProfile = async (req, res, next) => {
 
     if (name !== undefined) user.name = name;
     if (preferredLanguage !== undefined) user.preferredLanguage = preferredLanguage;
-    if (notificationsEnabled !== undefined) {
-      user.notificationsEnabled = notificationsEnabled === 'true' || notificationsEnabled === true;
-    }
-    
-    // If a file is uploaded, handle it via Cloudinary
-    if (req.file) {
-      if (user.avatar && user.avatar.includes('cloudinary')) {
-        const publicId = user.avatar.split('/').pop().split('.')[0];
-        try {
-          await deleteImage(`parcela/avatars/${publicId}`);
-        } catch (err) {
-          console.warn('Failed to delete old avatar:', err);
-        }
-      }
-      const result = await uploadImage(req.file.buffer, 'avatars');
-      user.avatar = result.secure_url;
-    } else if (avatar !== undefined) {
-      // Allow clearing or setting URL directly if no file
-      user.avatar = avatar;
-    }
+    if (notificationsEnabled !== undefined) user.notificationsEnabled = notificationsEnabled;
+    if (avatar !== undefined) user.avatar = avatar;
 
     await user.save();
     return sendSuccess(res, { user }, 'Profile updated successfully');
